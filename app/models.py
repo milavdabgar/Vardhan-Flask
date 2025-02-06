@@ -42,25 +42,89 @@ class ServiceRequest(db.Model):
     description = db.Column(db.Text)
     equipment_type = db.Column(db.String(50))  # computer, printer, cctv, etc.
     priority = db.Column(db.String(20))  # low, medium, high, urgent
-    status = db.Column(db.String(20))  # open, assigned, in_progress, resolved, closed
-    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'))
+    status = db.Column(db.String(20))  # requested, assigned, accepted, attended, resolved, closed, rejected, on_hold, reopened
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_sr_created_by'), nullable=False)
+    assigned_to = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_sr_assigned_to'))
     institution = db.Column(db.String(200), nullable=False)
     location_details = db.Column(db.String(200))
+
+    # Timestamps for each status
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    assigned_at = db.Column(db.DateTime)
+    accepted_at = db.Column(db.DateTime)
+    attended_at = db.Column(db.DateTime)
     resolved_at = db.Column(db.DateTime)
+    closed_at = db.Column(db.DateTime)
+    on_hold_at = db.Column(db.DateTime)
+    reopened_at = db.Column(db.DateTime)
+
+    # Additional fields for status tracking
+    assigned_by = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_sr_assigned_by'))
+    estimated_completion_time = db.Column(db.DateTime)
+    hold_reason = db.Column(db.Text)
+    rejection_reason = db.Column(db.Text)
     resolution_notes = db.Column(db.Text)
+    progress_notes = db.Column(db.Text)
 
     # Relationships
     updates = db.relationship('TicketUpdate', backref='service_request', lazy='dynamic')
+    feedback = db.relationship('RequestFeedback', backref='service_request', uselist=False)
+    assigned_by_user = db.relationship('User', foreign_keys=[assigned_by], backref='assigned_by_requests')
+
+    @property
+    def current_status_duration(self):
+        """Calculate the duration of the current status"""
+        status_times = {
+            'requested': self.created_at,
+            'assigned': self.assigned_at,
+            'accepted': self.accepted_at,
+            'attended': self.attended_at,
+            'resolved': self.resolved_at,
+            'closed': self.closed_at,
+            'on_hold': self.on_hold_at,
+            'reopened': self.reopened_at
+        }
+        current_status_time = status_times.get(self.status)
+        if current_status_time:
+            return datetime.utcnow() - current_status_time
+        return None
+
+    def can_transition_to(self, new_status):
+        """Check if the status transition is valid"""
+        valid_transitions = {
+            'requested': ['assigned', 'rejected'],
+            'assigned': ['accepted', 'rejected'],
+            'accepted': ['attended', 'on_hold', 'rejected'],
+            'attended': ['resolved', 'on_hold'],
+            'resolved': ['closed', 'reopened'],
+            'closed': ['reopened'],
+            'rejected': ['assigned'],
+            'on_hold': ['attended'],
+            'reopened': ['attended']
+        }
+        return new_status in valid_transitions.get(self.status, [])
+
+class RequestFeedback(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    service_request_id = db.Column(db.Integer, db.ForeignKey('service_request.id', name='fk_rf_service_request'), nullable=False)
+    rating = db.Column(db.Integer)  # 1-5 stars
+    comments = db.Column(db.Text)
+    resolution_satisfaction = db.Column(db.Boolean)  # True if satisfied
+    time_satisfaction = db.Column(db.Boolean)  # True if satisfied with resolution time
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_rf_created_by'), nullable=False)
+
+    # Relationship to get user details
+    created_by_user = db.relationship('User', foreign_keys=[created_by])
 
 class TicketUpdate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    service_request_id = db.Column(db.Integer, db.ForeignKey('service_request.id'), nullable=False)
-    update_type = db.Column(db.String(20))  # status_change, comment, resolution
+    service_request_id = db.Column(db.Integer, db.ForeignKey('service_request.id', name='fk_tu_service_request'), nullable=False)
+    update_type = db.Column(db.String(20))  # status_change, comment, progress_update
+    previous_status = db.Column(db.String(20))
+    new_status = db.Column(db.String(20))
     comment = db.Column(db.Text)
-    updated_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    updated_by = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_tu_updated_by'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationship to get user details

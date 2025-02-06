@@ -1,7 +1,7 @@
 from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from app.service_requests import bp
-from app.models import ServiceRequest, User, TicketUpdate
+from app.models import ServiceRequest, User, TicketUpdate, RequestFeedback
 from app import db
 from datetime import datetime
 
@@ -47,7 +47,7 @@ def create_request():
             priority=request.form['priority'],
             institution=current_user.institution,
             created_by=current_user.id,
-            status='open',
+            status='requested',
             created_at=datetime.utcnow(),
             ticket_number=generate_ticket_number()
         )
@@ -58,7 +58,7 @@ def create_request():
         update = TicketUpdate(
             service_request_id=service_request.id,
             update_type='status_change',
-            comment='Ticket created',
+            comment='Service request created',
             updated_by=current_user.id
         )
         db.session.add(update)
@@ -83,7 +83,7 @@ def view_request(request_id):
         return redirect(url_for('service_requests.list_requests'))
     
     return render_template('service_requests/view_request.html',
-                         title=f'Request #{service_request.id}',
+                         title=f'Request #{service_request.ticket_number}',
                          request=service_request)
 
 @bp.route('/request/<int:request_id>/update', methods=['GET', 'POST'])
@@ -92,40 +92,91 @@ def update_request(request_id):
     service_request = ServiceRequest.query.get_or_404(request_id)
     
     # Check access permissions
-    if current_user.role not in ['admin', 'technician']:
-        flash('Access denied. Only administrators and technicians can update requests.', 'danger')
+    if current_user.role == 'college_admin' and service_request.institution != current_user.institution:
+        flash('Access denied. You can only update requests from your institution.', 'danger')
         return redirect(url_for('service_requests.list_requests'))
-    
-    if current_user.role == 'technician' and service_request.assigned_to != current_user.id:
+    elif current_user.role == 'technician' and service_request.assigned_to != current_user.id:
         flash('Access denied. You can only update requests assigned to you.', 'danger')
         return redirect(url_for('service_requests.list_requests'))
     
     if request.method == 'POST':
-        old_status = service_request.status
-        service_request.status = request.form['status']
-        if current_user.role == 'admin':
-            if 'assigned_to' in request.form:
-                service_request.assigned_to = request.form['assigned_to']
+        new_status = request.form['status']
         
-        if service_request.status == 'resolved':
-            service_request.resolved_at = datetime.utcnow()
+        # Validate status transition
+        if not service_request.can_transition_to(new_status):
+            flash(f'Invalid status transition from {service_request.status} to {new_status}', 'danger')
+            return redirect(url_for('service_requests.view_request', request_id=request_id))
         
+        # Create ticket update
         update = TicketUpdate(
             service_request_id=service_request.id,
-            update_type='status_change' if old_status != service_request.status else 'comment',
-            comment=request.form.get('comment', ''),
+            update_type='status_change',
+            previous_status=service_request.status,
+            new_status=new_status,
+            comment=request.form['comment'],
             updated_by=current_user.id
         )
         db.session.add(update)
+        
+        # Update service request status and related fields
+        service_request.status = new_status
+        
+        # Handle status-specific updates
+        if new_status == 'assigned':
+            service_request.assigned_to = request.form['assigned_to']
+            service_request.assigned_by = current_user.id
+            service_request.assigned_at = datetime.utcnow()
+        
+        elif new_status == 'accepted':
+            service_request.accepted_at = datetime.utcnow()
+            if 'estimated_completion' in request.form and request.form['estimated_completion']:
+                service_request.estimated_completion_time = datetime.fromisoformat(request.form['estimated_completion'])
+        
+        elif new_status == 'attended':
+            service_request.attended_at = datetime.utcnow()
+            if 'progress_notes' in request.form:
+                service_request.progress_notes = request.form['progress_notes']
+        
+        elif new_status == 'on_hold':
+            service_request.on_hold_at = datetime.utcnow()
+            service_request.hold_reason = request.form['hold_reason']
+        
+        elif new_status == 'rejected':
+            service_request.rejection_reason = request.form['rejection_reason']
+        
+        elif new_status == 'resolved':
+            service_request.resolved_at = datetime.utcnow()
+            service_request.resolution_notes = request.form['resolution_notes']
+            if 'progress_notes' in request.form:
+                service_request.progress_notes = request.form['progress_notes']
+        
+        elif new_status == 'reopened':
+            service_request.reopened_at = datetime.utcnow()
+        
+        elif new_status == 'closed':
+            service_request.closed_at = datetime.utcnow()
+            
+            # Create feedback
+            feedback = RequestFeedback(
+                service_request_id=service_request.id,
+                rating=int(request.form['rating']),
+                comments=request.form['feedback_comments'],
+                resolution_satisfaction=bool(request.form.get('resolution_satisfaction')),
+                time_satisfaction=bool(request.form.get('time_satisfaction')),
+                created_by=current_user.id
+            )
+            db.session.add(feedback)
+        
         db.session.commit()
         flash('Service request updated successfully.', 'success')
         return redirect(url_for('service_requests.view_request', request_id=request_id))
     
+    # Get list of technicians for admin assignment
     technicians = None
     if current_user.role == 'admin':
         technicians = User.query.filter_by(role='technician', is_active=True).all()
     
     return render_template('service_requests/update_request.html',
-                         title=f'Update Request #{service_request.id}',
+                         title=f'Update Request #{service_request.ticket_number}',
                          request=service_request,
                          technicians=technicians)

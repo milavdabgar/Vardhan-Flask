@@ -13,21 +13,27 @@
                             <label for="status" class="form-label">Status</label>
                             <select class="form-select" id="status" name="status" required>
                                 {% if current_user.role == 'admin' %}
-                                    <option value="open" {% if request.status == 'open' %}selected{% endif %}>Open</option>
+                                    <option value="requested" {% if request.status == 'requested' %}selected{% endif %}>Requested</option>
                                     <option value="assigned" {% if request.status == 'assigned' %}selected{% endif %}>Assigned</option>
-                                    <option value="in_progress" {% if request.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                    <option value="rejected" {% if request.status == 'rejected' %}selected{% endif %}>Rejected</option>
+                                    <option value="reopened" {% if request.status == 'reopened' %}selected{% endif %}>Reopened</option>
+                                {% elif current_user.role == 'technician' %}
+                                    <option value="accepted" {% if request.status == 'accepted' %}selected{% endif %}>Accept Assignment</option>
+                                    <option value="attended" {% if request.status == 'attended' %}selected{% endif %}>Started Working</option>
+                                    <option value="on_hold" {% if request.status == 'on_hold' %}selected{% endif %}>On Hold</option>
                                     <option value="resolved" {% if request.status == 'resolved' %}selected{% endif %}>Resolved</option>
-                                {% else %}
-                                    <option value="in_progress" {% if request.status == 'in_progress' %}selected{% endif %}>In Progress</option>
-                                    <option value="resolved" {% if request.status == 'resolved' %}selected{% endif %}>Resolved</option>
+                                    <option value="rejected" {% if request.status == 'rejected' %}selected{% endif %}>Reject Assignment</option>
+                                {% else %}  {# college_admin #}
+                                    <option value="closed" {% if request.status == 'closed' %}selected{% endif %}>Close with Feedback</option>
+                                    <option value="reopened" {% if request.status == 'reopened' %}selected{% endif %}>Reopen Request</option>
                                 {% endif %}
                             </select>
                         </div>
 
-                        {% if current_user.role == 'admin' and technicians %}
+                        {% if current_user.role == 'admin' and request.status == 'requested' %}
                         <div class="mb-3">
                             <label for="assigned_to" class="form-label">Assign To</label>
-                            <select class="form-select" id="assigned_to" name="assigned_to">
+                            <select class="form-select" id="assigned_to" name="assigned_to" required>
                                 <option value="">Select technician</option>
                                 {% for tech in technicians %}
                                 <option value="{{ tech.id }}" {% if request.assigned_to == tech.id %}selected{% endif %}>
@@ -35,6 +41,81 @@
                                 </option>
                                 {% endfor %}
                             </select>
+                        </div>
+                        {% endif %}
+
+                        {% if current_user.role == 'technician' and request.status in ['accepted', 'attended'] %}
+                        <div class="mb-3">
+                            <label for="estimated_completion" class="form-label">Estimated Completion Time</label>
+                            <input type="datetime-local" class="form-control" id="estimated_completion" 
+                                   name="estimated_completion" value="{{ request.estimated_completion_time|default('', true) }}">
+                        </div>
+                        {% endif %}
+
+                        {% if current_user.role == 'technician' and request.status == 'on_hold' %}
+                        <div class="mb-3">
+                            <label for="hold_reason" class="form-label">Hold Reason</label>
+                            <textarea class="form-control" id="hold_reason" name="hold_reason" rows="2" required>{{ request.hold_reason }}</textarea>
+                        </div>
+                        {% endif %}
+
+                        {% if current_user.role == 'technician' and request.status == 'rejected' %}
+                        <div class="mb-3">
+                            <label for="rejection_reason" class="form-label">Rejection Reason</label>
+                            <textarea class="form-control" id="rejection_reason" name="rejection_reason" rows="2" required>{{ request.rejection_reason }}</textarea>
+                        </div>
+                        {% endif %}
+
+                        {% if current_user.role == 'technician' and request.status in ['attended', 'resolved'] %}
+                        <div class="mb-3">
+                            <label for="progress_notes" class="form-label">Progress Notes</label>
+                            <textarea class="form-control" id="progress_notes" name="progress_notes" rows="3">{{ request.progress_notes }}</textarea>
+                        </div>
+                        {% endif %}
+
+                        {% if current_user.role == 'technician' and request.status == 'resolved' %}
+                        <div class="mb-3">
+                            <label for="resolution_notes" class="form-label">Resolution Notes</label>
+                            <textarea class="form-control" id="resolution_notes" name="resolution_notes" rows="3" required>{{ request.resolution_notes }}</textarea>
+                        </div>
+                        {% endif %}
+
+                        {% if current_user.role == 'college_admin' and request.status == 'closed' %}
+                        <div class="mb-3">
+                            <label class="form-label">Feedback</label>
+                            <div class="mb-2">
+                                <label for="rating" class="form-label">Rating</label>
+                                <select class="form-select" id="rating" name="rating" required>
+                                    <option value="5">★★★★★ Excellent</option>
+                                    <option value="4">★★★★☆ Good</option>
+                                    <option value="3">★★★☆☆ Average</option>
+                                    <option value="2">★★☆☆☆ Poor</option>
+                                    <option value="1">★☆☆☆☆ Very Poor</option>
+                                </select>
+                            </div>
+                            <div class="mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="resolution_satisfaction" 
+                                           name="resolution_satisfaction" value="true">
+                                    <label class="form-check-label" for="resolution_satisfaction">
+                                        Satisfied with the resolution
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="time_satisfaction" 
+                                           name="time_satisfaction" value="true">
+                                    <label class="form-check-label" for="time_satisfaction">
+                                        Satisfied with resolution time
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <label for="feedback_comments" class="form-label">Comments</label>
+                                <textarea class="form-control" id="feedback_comments" name="feedback_comments" 
+                                          rows="3" required></textarea>
+                            </div>
                         </div>
                         {% endif %}
 
@@ -67,10 +148,15 @@
                         <dt class="col-sm-4">Status</dt>
                         <dd class="col-sm-8">
                             <span class="badge bg-{{ 
-                                'warning' if request.status == 'open'
+                                'warning' if request.status == 'requested'
                                 else 'info' if request.status == 'assigned'
-                                else 'primary' if request.status == 'in_progress'
+                                else 'primary' if request.status == 'accepted'
+                                else 'info' if request.status == 'attended'
                                 else 'success' if request.status == 'resolved'
+                                else 'secondary' if request.status == 'closed'
+                                else 'danger' if request.status == 'rejected'
+                                else 'warning' if request.status == 'on_hold'
+                                else 'primary' if request.status == 'reopened'
                                 else 'secondary'
                             }}">
                                 {{ request.status|title }}
@@ -95,6 +181,11 @@
                         {% if request.assigned_to %}
                         <dt class="col-sm-4">Assigned To</dt>
                         <dd class="col-sm-8">{{ request.assigned_to_user.full_name }}</dd>
+                        {% endif %}
+
+                        {% if request.estimated_completion_time %}
+                        <dt class="col-sm-4">Est. Completion</dt>
+                        <dd class="col-sm-8">{{ request.estimated_completion_time.strftime('%Y-%m-%d %H:%M') }}</dd>
                         {% endif %}
                     </dl>
                 </div>
