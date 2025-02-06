@@ -42,18 +42,23 @@ class ServiceRequest(db.Model):
     description = db.Column(db.Text)
     equipment_type = db.Column(db.String(50))  # computer, printer, cctv, etc.
     priority = db.Column(db.String(20))  # low, medium, high, urgent
-    status = db.Column(db.String(20))  # requested, assigned, accepted, attended, resolved, closed, rejected, on_hold, reopened
+    status = db.Column(db.String(20), default='requested', nullable=False)  # States: requested, assigned, accepted, working, completed, closed, rejected, on_hold, reopened
     created_by = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_sr_created_by'), nullable=False)
     assigned_to = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_sr_assigned_to'))
     institution = db.Column(db.String(200), nullable=False)
     location_details = db.Column(db.String(200))
 
+    # Scheduling fields
+    scheduled_date = db.Column(db.Date)
+    scheduled_time = db.Column(db.Time)
+    actual_start_time = db.Column(db.DateTime)
+
     # Timestamps for each status
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     assigned_at = db.Column(db.DateTime)
     accepted_at = db.Column(db.DateTime)
-    attended_at = db.Column(db.DateTime)
-    resolved_at = db.Column(db.DateTime)
+    working_at = db.Column(db.DateTime)
+    completed_at = db.Column(db.DateTime)
     closed_at = db.Column(db.DateTime)
     on_hold_at = db.Column(db.DateTime)
     reopened_at = db.Column(db.DateTime)
@@ -71,38 +76,93 @@ class ServiceRequest(db.Model):
     feedback = db.relationship('RequestFeedback', backref='service_request', uselist=False)
     assigned_by_user = db.relationship('User', foreign_keys=[assigned_by], backref='assigned_by_requests')
 
-    @property
-    def current_status_duration(self):
-        """Calculate the duration of the current status"""
-        status_times = {
-            'requested': self.created_at,
-            'assigned': self.assigned_at,
-            'accepted': self.accepted_at,
-            'attended': self.attended_at,
-            'resolved': self.resolved_at,
-            'closed': self.closed_at,
-            'on_hold': self.on_hold_at,
-            'reopened': self.reopened_at
-        }
-        current_status_time = status_times.get(self.status)
-        if current_status_time:
-            return datetime.utcnow() - current_status_time
-        return None
-
     def can_transition_to(self, new_status):
         """Check if the status transition is valid"""
         valid_transitions = {
             'requested': ['assigned', 'rejected'],
             'assigned': ['accepted', 'rejected'],
-            'accepted': ['attended', 'on_hold', 'rejected'],
-            'attended': ['resolved', 'on_hold'],
-            'resolved': ['closed', 'reopened'],
+            'accepted': ['scheduled'],  # After accepting, technician schedules the visit
+            'scheduled': ['pending_approval'],  # When technician arrives and wants to start
+            'pending_approval': ['working', 'scheduled'],  # College admin approves start or reschedules
+            'working': ['completed', 'on_hold'],
+            'completed': ['closed', 'reopened'],
             'closed': ['reopened'],
             'rejected': ['assigned'],
-            'on_hold': ['attended'],
-            'reopened': ['attended']
+            'on_hold': ['working'],
+            'reopened': ['scheduled']  # Reopened requests need to be rescheduled
         }
         return new_status in valid_transitions.get(self.status, [])
+
+    def get_status_badge_color(self):
+        """Get the appropriate badge color for the status"""
+        colors = {
+            'requested': 'warning',    # yellow - needs attention
+            'assigned': 'info',        # blue - in system
+            'accepted': 'primary',     # blue - acknowledged
+            'scheduled': 'info',       # blue - scheduled
+            'pending_approval': 'warning',  # yellow - needs approval
+            'working': 'info',         # blue - active work
+            'completed': 'success',    # green - work done
+            'closed': 'secondary',     # gray - finished
+            'rejected': 'danger',      # red - needs attention
+            'on_hold': 'warning',      # yellow - needs attention
+            'reopened': 'warning'      # yellow - needs attention
+        }
+        return colors.get(self.status, 'secondary')
+
+    def get_allowed_actions(self, user_role):
+        """Get allowed actions based on current status and user role"""
+        actions = []
+        
+        if user_role == 'admin':
+            if self.status == 'requested':
+                actions.extend([('assign', 'Assign Technician', 'primary')])
+            elif self.status == 'rejected':
+                actions.extend([('assign', 'Reassign Technician', 'primary')])
+        
+        elif user_role == 'technician':
+            if self.status == 'assigned':
+                actions.extend([
+                    ('accept', 'Accept Assignment', 'success'),
+                    ('reject', 'Reject Assignment', 'danger')
+                ])
+            elif self.status == 'accepted':
+                actions.extend([('schedule', 'Schedule Visit', 'primary')])
+            elif self.status == 'scheduled':
+                actions.extend([('request_approval', 'Request Approval', 'primary')])
+            elif self.status == 'pending_approval':
+                actions.extend([('start_work', 'Start Working', 'primary')])
+            elif self.status == 'working':
+                actions.extend([
+                    ('complete', 'Mark as Complete', 'success'),
+                    ('hold', 'Put on Hold', 'warning')
+                ])
+            elif self.status == 'on_hold':
+                actions.extend([('resume', 'Resume Work', 'primary')])
+            elif self.status == 'reopened':
+                actions.extend([('schedule', 'Reschedule Visit', 'primary')])
+        
+        elif user_role == 'college_admin':
+            if self.status == 'pending_approval':
+                actions.extend([
+                    ('approve', 'Approve Start', 'success'),
+                    ('reschedule', 'Reschedule', 'warning')
+                ])
+            elif self.status == 'completed':
+                actions.extend([
+                    ('approve', 'Approve & Close', 'success'),
+                    ('reopen', 'Request Changes', 'danger')
+                ])
+            elif self.status == 'closed':
+                actions.extend([('reopen', 'Reopen Request', 'warning')])
+        
+        return actions
+
+    def format_schedule_time(self):
+        """Format scheduled date and time for display"""
+        if self.scheduled_date and self.scheduled_time:
+            return f"{self.scheduled_date.strftime('%Y-%m-%d')} at {self.scheduled_time.strftime('%I:%M %p')}"
+        return "Not scheduled"
 
 class RequestFeedback(db.Model):
     id = db.Column(db.Integer, primary_key=True)

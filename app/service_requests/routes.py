@@ -1,7 +1,7 @@
 from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from app.service_requests import bp
-from app.models import ServiceRequest, User, TicketUpdate, RequestFeedback
+from app.models import ServiceRequest, User, TicketUpdate, RequestFeedback, RequestUpdate
 from app import db
 from datetime import datetime
 
@@ -19,13 +19,10 @@ def generate_ticket_number():
 @login_required
 def list_requests():
     if current_user.role == 'admin':
-        # Admin sees all requests
         requests = ServiceRequest.query.order_by(ServiceRequest.created_at.desc()).all()
     elif current_user.role == 'technician':
-        # Technician sees assigned requests
         requests = ServiceRequest.query.filter_by(assigned_to=current_user.id).order_by(ServiceRequest.created_at.desc()).all()
     else:
-        # College admin sees their institution's requests
         requests = ServiceRequest.query.filter_by(institution=current_user.institution).order_by(ServiceRequest.created_at.desc()).all()
     
     return render_template('service_requests/list_requests.html', 
@@ -54,7 +51,6 @@ def create_request():
         db.session.add(service_request)
         db.session.commit()
         
-        # Create initial ticket update
         update = TicketUpdate(
             service_request_id=service_request.id,
             update_type='status_change',
@@ -74,7 +70,6 @@ def create_request():
 def view_request(request_id):
     service_request = ServiceRequest.query.get_or_404(request_id)
     
-    # Check access permissions
     if current_user.role == 'college_admin' and service_request.institution != current_user.institution:
         flash('Access denied. You can only view requests from your institution.', 'danger')
         return redirect(url_for('service_requests.list_requests'))
@@ -91,7 +86,6 @@ def view_request(request_id):
 def update_request(request_id):
     service_request = ServiceRequest.query.get_or_404(request_id)
     
-    # Check access permissions
     if current_user.role == 'college_admin' and service_request.institution != current_user.institution:
         flash('Access denied. You can only update requests from your institution.', 'danger')
         return redirect(url_for('service_requests.list_requests'))
@@ -100,60 +94,51 @@ def update_request(request_id):
         return redirect(url_for('service_requests.list_requests'))
     
     if request.method == 'POST':
-        new_status = request.form['status']
+        action = request.form.get('action')
+        comment = request.form.get('comment', '').strip()
+        new_status = None
         
-        # Validate status transition
-        if not service_request.can_transition_to(new_status):
-            flash(f'Invalid status transition from {service_request.status} to {new_status}', 'danger')
-            return redirect(url_for('service_requests.view_request', request_id=request_id))
-        
-        # Create ticket update
-        update = TicketUpdate(
-            service_request_id=service_request.id,
-            update_type='status_change',
-            previous_status=service_request.status,
-            new_status=new_status,
-            comment=request.form['comment'],
-            updated_by=current_user.id
-        )
-        db.session.add(update)
-        
-        # Update service request status and related fields
-        service_request.status = new_status
-        
-        # Handle status-specific updates
-        if new_status == 'assigned':
+        # Handle different actions
+        if action == 'assign' and current_user.role == 'admin':
+            new_status = 'assigned'
             service_request.assigned_to = request.form['assigned_to']
             service_request.assigned_by = current_user.id
             service_request.assigned_at = datetime.utcnow()
         
-        elif new_status == 'accepted':
+        elif action == 'accept' and current_user.role == 'technician':
+            new_status = 'accepted'
             service_request.accepted_at = datetime.utcnow()
-            if 'estimated_completion' in request.form and request.form['estimated_completion']:
-                service_request.estimated_completion_time = datetime.fromisoformat(request.form['estimated_completion'])
+            service_request.estimated_completion_time = datetime.strptime(
+                request.form['estimated_completion'], '%Y-%m-%dT%H:%M'
+            )
         
-        elif new_status == 'attended':
-            service_request.attended_at = datetime.utcnow()
-            if 'progress_notes' in request.form:
+        elif action == 'reject' and current_user.role == 'technician':
+            new_status = 'rejected'
+            service_request.rejection_reason = request.form['rejection_reason']
+            comment = f"Rejected - Reason: {service_request.rejection_reason}"
+        
+        elif action == 'start_work' and current_user.role == 'technician':
+            new_status = 'working'
+            service_request.working_at = datetime.utcnow()
+        
+        elif action == 'complete' and current_user.role == 'technician':
+            new_status = 'completed'
+            service_request.completed_at = datetime.utcnow()
+            if request.form.get('progress_notes'):
                 service_request.progress_notes = request.form['progress_notes']
         
-        elif new_status == 'on_hold':
+        elif action == 'hold' and current_user.role == 'technician':
+            new_status = 'on_hold'
             service_request.on_hold_at = datetime.utcnow()
             service_request.hold_reason = request.form['hold_reason']
+            comment = f"Put on hold - Reason: {service_request.hold_reason}"
         
-        elif new_status == 'rejected':
-            service_request.rejection_reason = request.form['rejection_reason']
+        elif action == 'resume' and current_user.role == 'technician':
+            new_status = 'working'
+            service_request.working_at = datetime.utcnow()
         
-        elif new_status == 'resolved':
-            service_request.resolved_at = datetime.utcnow()
-            service_request.resolution_notes = request.form['resolution_notes']
-            if 'progress_notes' in request.form:
-                service_request.progress_notes = request.form['progress_notes']
-        
-        elif new_status == 'reopened':
-            service_request.reopened_at = datetime.utcnow()
-        
-        elif new_status == 'closed':
+        elif action == 'approve' and current_user.role == 'college_admin':
+            new_status = 'closed'
             service_request.closed_at = datetime.utcnow()
             
             # Create feedback
@@ -166,17 +151,69 @@ def update_request(request_id):
                 created_by=current_user.id
             )
             db.session.add(feedback)
+            comment = 'Request approved and closed with feedback'
         
-        db.session.commit()
-        flash('Service request updated successfully.', 'success')
-        return redirect(url_for('service_requests.view_request', request_id=request_id))
+        elif action == 'reopen' and current_user.role == 'college_admin':
+            new_status = 'reopened'
+            service_request.reopened_at = datetime.utcnow()
+            comment = 'Request reopened for changes: ' + comment if comment else 'Request reopened for changes'
+        
+        elif action == 'schedule' and current_user.role == 'technician':
+            new_status = 'scheduled'
+            # Convert form date and time to Python objects
+            scheduled_date = datetime.strptime(request.form['scheduled_date'], '%Y-%m-%d').date()
+            scheduled_time = datetime.strptime(request.form['scheduled_time'], '%H:%M').time()
+            service_request.scheduled_date = scheduled_date
+            service_request.scheduled_time = scheduled_time
+            comment = f"Visit scheduled for {service_request.format_schedule_time()}"
+            flash('Visit has been scheduled. College admin will be notified.', 'success')
+            
+        elif action == 'request_approval' and current_user.role == 'technician':
+            new_status = 'pending_approval'
+            service_request.actual_start_time = datetime.utcnow()
+            comment = "Technician has arrived and is ready to start work"
+            flash('Waiting for college admin approval to start work.', 'info')
+            
+        elif action == 'approve' and current_user.role == 'college_admin' and service_request.status == 'pending_approval':
+            new_status = 'working'
+            service_request.working_at = datetime.utcnow()
+            comment = "Work start approved by college admin"
+            flash('Work start has been approved.', 'success')
+            
+        elif action == 'reschedule' and current_user.role == 'college_admin':
+            new_status = 'scheduled'
+            reason = request.form.get('reschedule_reason', 'No reason provided')
+            comment = f"Reschedule requested - Reason: {reason}"
+            flash('Visit has been requested to be rescheduled.', 'warning')
+        
+        # Update status if changed
+        if new_status and service_request.can_transition_to(new_status):
+            service_request.status = new_status
+        
+        # Create update log
+        if comment:
+            update = RequestUpdate(
+                service_request_id=service_request.id,
+                status=service_request.status,
+                comment=comment,
+                created_by=current_user.id
+            )
+            db.session.add(update)
+        
+        try:
+            db.session.commit()
+            flash('Service request updated successfully.', 'success')
+            return redirect(url_for('service_requests.view_request', request_id=request_id))
+        except Exception as e:
+            db.session.rollback()
+            flash('Error updating service request.', 'error')
+            current_app.logger.error(f'Error updating service request: {str(e)}')
     
-    # Get list of technicians for admin assignment
+    # GET request - show form
     technicians = None
     if current_user.role == 'admin':
-        technicians = User.query.filter_by(role='technician', is_active=True).all()
+        technicians = User.query.filter_by(role='technician').all()
     
     return render_template('service_requests/update_request.html',
-                         title=f'Update Request #{service_request.ticket_number}',
                          request=service_request,
                          technicians=technicians)
