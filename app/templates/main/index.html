@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="welcome-header">
+    <h1>Welcome to Vardhan Insys</h1>
+    <p class="lead">Your trusted partner for IT infrastructure management</p>
+</div>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="feature-card">
+                <i class="fas fa-tasks feature-icon"></i>
+                <h3>Service Request Management</h3>
+                <p>Efficiently track and manage service requests with our streamlined system.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature-card">
+                <i class="fas fa-chart-line feature-icon"></i>
+                <h3>Real-time Updates</h3>
+                <p>Stay informed with real-time status updates on your service requests.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature-card">
+                <i class="fas fa-users feature-icon"></i>
+                <h3>Multi-role Support</h3>
+                <p>Dedicated interfaces for administrators, technicians, and institution staff.</p>
+            </div>
+        </div>
+    </div>
+
+    {% if not current_user.is_authenticated %}
+    <div class="text-center mt-4">
+        <p class="lead">Get started with our service portal today!</p>
+        <div class="mt-3">
+            <a href="{{ url_for('auth.login') }}" class="btn btn-primary me-2">Sign In</a>
+            <a href="{{ url_for('auth.register') }}" class="btn btn-outline-primary">Register</a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,126 @@
+/* Custom styles */
+.navbar-brand {
+    font-weight: bold;
+}
+
+.ticket-card {
+    margin-bottom: 1rem;
+    transition: transform 0.2s;
+}
+
+.ticket-card:hover {
+    transform: translateY(-2px);
+}
+
+.priority-urgent {
+    border-left: 4px solid #dc3545;
+}
+
+.priority-high {
+    border-left: 4px solid #fd7e14;
+}
+
+.priority-medium {
+    border-left: 4px solid #ffc107;
+}
+
+.priority-low {
+    border-left: 4px solid #28a745;
+}
+
+.status-badge {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.6rem;
+}
+
+.ticket-updates {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.update-item {
+    border-left: 3px solid #dee2e6;
+    padding-left: 1rem;
+    margin-bottom: 1rem;
+}
+
+.update-item:last-child {
+    margin-bottom: 0;
+}
+
+.dashboard-stats {
+    text-align: center;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    background-color: #f8f9fa;
+    margin-bottom: 1rem;
+}
+
+.stats-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #0d6efd;
+}
+
+.form-card {
+    background-color: #fff;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    padding: 1.5rem;
+}
+
+/* Sidebar styles */
+.sidebar {
+    min-height: calc(100vh - 56px);
+    background-color: #f8f9fa;
+    padding-top: 1rem;
+}
+
+.sidebar .nav-link {
+    color: #333;
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.sidebar .nav-link:hover {
+    background-color: #e9ecef;
+}
+
+.sidebar .nav-link.active {
+    background-color: #0d6efd;
+    color: #fff;
+}
+
+/* Login and Register forms */
+.auth-form {
+    max-width: 400px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: #fff;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+/* Welcome page */
+.welcome-header {
+    text-align: center;
+    padding: 4rem 0;
+    background-color: #f8f9fa;
+    margin-bottom: 2rem;
+}
+
+.feature-card {
+    text-align: center;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    border-radius: 0.5rem;
+    background-color: #fff;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.feature-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    color: #0d6efd;
+}

@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Technician Dashboard</h1>
+    
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Assigned Tickets</h5>
+                    <h2 class="card-text">{{ assigned_tickets|length }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Completed Tickets</h5>
+                    <h2 class="card-text">{{ completed_tickets }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Response Rate</h5>
+                    <h2 class="card-text">
+                        {% if completed_tickets + assigned_tickets|length > 0 %}
+                            {{ (completed_tickets / (completed_tickets + assigned_tickets|length) * 100)|round }}%
+                        {% else %}
+                            0%
+                        {% endif %}
+                    </h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Tickets -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">My Active Tickets</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Ticket #</th>
+                            <th>Title</th>
+                            <th>Institution</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ticket in assigned_tickets %}
+                        <tr>
+                            <td>{{ ticket.ticket_number }}</td>
+                            <td>{{ ticket.title }}</td>
+                            <td>{{ ticket.institution }}</td>
+                            <td>
+                                <span class="badge bg-{{ 
+                                    'info' if ticket.status == 'assigned'
+                                    else 'primary' if ticket.status == 'in_progress'
+                                    else 'success' if ticket.status == 'resolved'
+                                    else 'secondary'
+                                }}">
+                                    {{ ticket.status|title }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ 
+                                    'danger' if ticket.priority == 'urgent'
+                                    else 'warning' if ticket.priority == 'high'
+                                    else 'info' if ticket.priority == 'medium'
+                                    else 'secondary'
+                                }}">
+                                    {{ ticket.priority|title }}
+                                </span>
+                            </td>
+                            <td>{{ ticket.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{{ url_for('service_requests.view_request', request_id=ticket.id) }}" 
+                                       class="btn btn-sm btn-outline-primary">View</a>
+                                    <a href="{{ url_for('service_requests.update_request', request_id=ticket.id) }}" 
+                                       class="btn btn-sm btn-outline-success">Update</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center">No active tickets assigned to you</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Total Tickets</h5>
+                    <h2 class="card-text">{{ total_tickets }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h5 class="card-title">Pending Approvals</h5>
+                    <h2 class="card-text">{{ pending_approvals }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Active Technicians</h5>
+                    <h2 class="card-text">{{ active_technicians }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Resolution Rate</h5>
+                    <h2 class="card-text">
+                        {% if total_tickets > 0 %}
+                            {{ ((total_tickets - open_tickets|length) / total_tickets * 100)|round }}%
+                        {% else %}
+                            0%
+                        {% endif %}
+                    </h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Service Requests -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Recent Service Requests</h5>
+            <a href="{{ url_for('service_requests.list_requests') }}" class="btn btn-primary btn-sm">View All</a>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Ticket #</th>
+                            <th>Title</th>
+                            <th>Institution</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ticket in open_tickets %}
+                        <tr>
+                            <td>{{ ticket.ticket_number }}</td>
+                            <td>{{ ticket.title }}</td>
+                            <td>{{ ticket.institution }}</td>
+                            <td>
+                                <span class="badge bg-{{ 
+                                    'warning' if ticket.status == 'open'
+                                    else 'info' if ticket.status == 'assigned'
+                                    else 'primary' if ticket.status == 'in_progress'
+                                    else 'success' if ticket.status == 'resolved'
+                                    else 'secondary'
+                                }}">
+                                    {{ ticket.status|title }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ 
+                                    'danger' if ticket.priority == 'urgent'
+                                    else 'warning' if ticket.priority == 'high'
+                                    else 'info' if ticket.priority == 'medium'
+                                    else 'secondary'
+                                }}">
+                                    {{ ticket.priority|title }}
+                                </span>
+                            </td>
+                            <td>{{ ticket.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{{ url_for('service_requests.view_request', request_id=ticket.id) }}" 
+                                       class="btn btn-sm btn-outline-primary">View</a>
+                                    <a href="{{ url_for('service_requests.update_request', request_id=ticket.id) }}" 
+                                       class="btn btn-sm btn-outline-success">Update</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center">No open service requests</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

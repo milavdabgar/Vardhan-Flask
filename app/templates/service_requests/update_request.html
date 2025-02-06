@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Update Request #{{ request.ticket_number }}</h1>
+    
+    <div class="row mt-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status" name="status" required>
+                                {% if current_user.role == 'admin' %}
+                                    <option value="open" {% if request.status == 'open' %}selected{% endif %}>Open</option>
+                                    <option value="assigned" {% if request.status == 'assigned' %}selected{% endif %}>Assigned</option>
+                                    <option value="in_progress" {% if request.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                    <option value="resolved" {% if request.status == 'resolved' %}selected{% endif %}>Resolved</option>
+                                {% else %}
+                                    <option value="in_progress" {% if request.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                    <option value="resolved" {% if request.status == 'resolved' %}selected{% endif %}>Resolved</option>
+                                {% endif %}
+                            </select>
+                        </div>
+
+                        {% if current_user.role == 'admin' and technicians %}
+                        <div class="mb-3">
+                            <label for="assigned_to" class="form-label">Assign To</label>
+                            <select class="form-select" id="assigned_to" name="assigned_to">
+                                <option value="">Select technician</option>
+                                {% for tech in technicians %}
+                                <option value="{{ tech.id }}" {% if request.assigned_to == tech.id %}selected{% endif %}>
+                                    {{ tech.full_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label for="comment" class="form-label">Update Comment</label>
+                            <textarea class="form-control" id="comment" name="comment" rows="3" required
+                                      placeholder="Add a comment about this update"></textarea>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('service_requests.view_request', request_id=request.id) }}" 
+                               class="btn btn-secondary me-md-2">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Update Request</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Current Information</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Title</dt>
+                        <dd class="col-sm-8">{{ request.title }}</dd>
+
+                        <dt class="col-sm-4">Status</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-{{ 
+                                'warning' if request.status == 'open'
+                                else 'info' if request.status == 'assigned'
+                                else 'primary' if request.status == 'in_progress'
+                                else 'success' if request.status == 'resolved'
+                                else 'secondary'
+                            }}">
+                                {{ request.status|title }}
+                            </span>
+                        </dd>
+
+                        <dt class="col-sm-4">Priority</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-{{ 
+                                'danger' if request.priority == 'urgent'
+                                else 'warning' if request.priority == 'high'
+                                else 'info' if request.priority == 'medium'
+                                else 'secondary'
+                            }}">
+                                {{ request.priority|title }}
+                            </span>
+                        </dd>
+
+                        <dt class="col-sm-4">Equipment</dt>
+                        <dd class="col-sm-8">{{ request.equipment_type|title }}</dd>
+
+                        {% if request.assigned_to %}
+                        <dt class="col-sm-4">Assigned To</dt>
+                        <dd class="col-sm-8">{{ request.assigned_to_user.full_name }}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

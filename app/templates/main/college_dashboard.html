@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">{{ current_user.institution }} Dashboard</h1>
+    
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Open Tickets</h5>
+                    <h2 class="card-text">{{ open_tickets|length }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Resolved Tickets</h5>
+                    <h2 class="card-text">{{ resolved_tickets|length }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Resolution Rate</h5>
+                    <h2 class="card-text">
+                        {% if open_tickets|length + resolved_tickets|length > 0 %}
+                            {{ (resolved_tickets|length / (open_tickets|length + resolved_tickets|length) * 100)|round }}%
+                        {% else %}
+                            0%
+                        {% endif %}
+                    </h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create New Ticket Button -->
+    <div class="mb-4">
+        <a href="{{ url_for('service_requests.create_request') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Create New Service Request
+        </a>
+    </div>
+
+    <!-- Active Tickets -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Active Service Requests</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Ticket #</th>
+                            <th>Title</th>
+                            <th>Equipment</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ticket in open_tickets %}
+                        <tr>
+                            <td>{{ ticket.ticket_number }}</td>
+                            <td>{{ ticket.title }}</td>
+                            <td>{{ ticket.equipment_type|title }}</td>
+                            <td>
+                                <span class="badge bg-{{ 
+                                    'warning' if ticket.status == 'open' 
+                                    else 'info' if ticket.status == 'assigned'
+                                    else 'primary' if ticket.status == 'in_progress'
+                                    else 'success' if ticket.status == 'resolved'
+                                    else 'secondary'
+                                }}">
+                                    {{ ticket.status|title }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ 
+                                    'danger' if ticket.priority == 'urgent'
+                                    else 'warning' if ticket.priority == 'high'
+                                    else 'info' if ticket.priority == 'medium'
+                                    else 'secondary'
+                                }}">
+                                    {{ ticket.priority|title }}
+                                </span>
+                            </td>
+                            <td>{{ ticket.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <a href="{{ url_for('service_requests.view_request', request_id=ticket.id) }}" 
+                                   class="btn btn-sm btn-outline-primary">View</a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center">No active service requests</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recently Resolved Tickets -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Recently Resolved Tickets</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Ticket #</th>
+                            <th>Title</th>
+                            <th>Equipment</th>
+                            <th>Resolved By</th>
+                            <th>Resolved At</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ticket in resolved_tickets[:5] %}
+                        <tr>
+                            <td>{{ ticket.ticket_number }}</td>
+                            <td>{{ ticket.title }}</td>
+                            <td>{{ ticket.equipment_type|title }}</td>
+                            <td>{{ ticket.technician.full_name if ticket.technician else 'N/A' }}</td>
+                            <td>{{ ticket.resolved_at.strftime('%Y-%m-%d %H:%M') if ticket.resolved_at else 'N/A' }}</td>
+                            <td>
+                                <a href="{{ url_for('service_requests.view_request', request_id=ticket.id) }}" 
+                                   class="btn btn-sm btn-outline-primary">View</a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center">No resolved tickets</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
