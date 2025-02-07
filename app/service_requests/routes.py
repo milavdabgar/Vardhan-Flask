@@ -1,7 +1,7 @@
 from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from app.service_requests import bp
-from app.models import ServiceRequest, User, TicketUpdate, RequestFeedback, RequestUpdate
+from app.models import ServiceRequest, User, TicketUpdate, RequestFeedback
 from app import db
 from datetime import datetime
 
@@ -171,20 +171,20 @@ def update_request(request_id):
         elif action == 'request_approval' and current_user.role == 'technician':
             new_status = 'pending_approval'
             service_request.actual_start_time = datetime.utcnow()
-            comment = "Technician has arrived and is ready to start work"
-            flash('Waiting for college admin approval to start work.', 'info')
+            comment = "Technician has arrived and requests authorization to start work"
+            flash('Waiting for college admin to authorize work start.', 'info')
             
-        elif action == 'approve' and current_user.role == 'college_admin' and service_request.status == 'pending_approval':
+        elif action == 'approve_start' and current_user.role == 'college_admin':
             new_status = 'working'
             service_request.working_at = datetime.utcnow()
-            comment = "Work start approved by college admin"
-            flash('Work start has been approved.', 'success')
+            comment = "Work start authorized by college admin"
+            flash('Work start has been authorized.', 'success')
             
         elif action == 'reschedule' and current_user.role == 'college_admin':
             new_status = 'scheduled'
             reason = request.form.get('reschedule_reason', 'No reason provided')
-            comment = f"Reschedule requested - Reason: {reason}"
-            flash('Visit has been requested to be rescheduled.', 'warning')
+            comment = f"Different time requested - Reason: {reason}"
+            flash('Technician has been asked to schedule a different time.', 'warning')
         
         # Update status if changed
         if new_status and service_request.can_transition_to(new_status):
@@ -192,11 +192,13 @@ def update_request(request_id):
         
         # Create update log
         if comment:
-            update = RequestUpdate(
+            update = TicketUpdate(
                 service_request_id=service_request.id,
-                status=service_request.status,
+                update_type='status_change',
+                previous_status=service_request.status,
+                new_status=new_status,
                 comment=comment,
-                created_by=current_user.id
+                updated_by=current_user.id
             )
             db.session.add(update)
         
@@ -215,5 +217,8 @@ def update_request(request_id):
         technicians = User.query.filter_by(role='technician').all()
     
     return render_template('service_requests/update_request.html',
+                         title='Update Service Request',
                          request=service_request,
-                         technicians=technicians)
+                         technicians=technicians,
+                         actions=service_request.get_allowed_actions(current_user.role),
+                         now=datetime.now())

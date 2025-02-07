@@ -79,36 +79,53 @@ class ServiceRequest(db.Model):
     def can_transition_to(self, new_status):
         """Check if the status transition is valid"""
         valid_transitions = {
-            'requested': ['assigned', 'rejected'],
-            'assigned': ['accepted', 'rejected'],
-            'accepted': ['scheduled'],  # After accepting, technician schedules the visit
-            'scheduled': ['pending_approval'],  # When technician arrives and wants to start
-            'pending_approval': ['working', 'scheduled'],  # College admin approves start or reschedules
-            'working': ['completed', 'on_hold'],
-            'completed': ['closed', 'reopened'],
-            'closed': ['reopened'],
-            'rejected': ['assigned'],
-            'on_hold': ['working'],
-            'reopened': ['scheduled']  # Reopened requests need to be rescheduled
+            'requested': ['assigned', 'rejected'],  # New request can be assigned or rejected
+            'assigned': ['accepted', 'rejected'],   # Assigned technician can accept or reject
+            'accepted': ['scheduled'],             # After accepting, technician must schedule visit
+            'scheduled': ['pending_approval'],     # When technician arrives, they request start approval
+            'pending_approval': ['working', 'scheduled'],  # Admin can approve start or request reschedule
+            'working': ['completed', 'on_hold'],   # Work can be completed or put on hold
+            'completed': ['closed', 'reopened'],   # College admin can close or request changes
+            'closed': ['reopened'],               # Closed requests can be reopened if issues found
+            'rejected': ['requested'],            # Rejected goes back to requested for reassignment
+            'on_hold': ['working'],              # On-hold work can be resumed
+            'reopened': ['scheduled']            # Reopened requests need new visit scheduled
         }
         return new_status in valid_transitions.get(self.status, [])
 
     def get_status_badge_color(self):
         """Get the appropriate badge color for the status"""
         colors = {
-            'requested': 'warning',    # yellow - needs attention
-            'assigned': 'info',        # blue - in system
-            'accepted': 'primary',     # blue - acknowledged
-            'scheduled': 'info',       # blue - scheduled
-            'pending_approval': 'warning',  # yellow - needs approval
-            'working': 'info',         # blue - active work
-            'completed': 'success',    # green - work done
-            'closed': 'secondary',     # gray - finished
-            'rejected': 'danger',      # red - needs attention
-            'on_hold': 'warning',      # yellow - needs attention
-            'reopened': 'warning'      # yellow - needs attention
+            'requested': 'warning',     # yellow - needs attention
+            'assigned': 'info',         # blue - in system
+            'accepted': 'primary',      # blue - acknowledged
+            'scheduled': 'info',        # blue - planned
+            'pending_approval': 'warning', # yellow - needs attention
+            'working': 'primary',       # blue - active work
+            'completed': 'success',     # green - work done
+            'closed': 'secondary',      # gray - finished
+            'rejected': 'danger',       # red - needs attention
+            'on_hold': 'warning',       # yellow - needs attention
+            'reopened': 'warning'       # yellow - needs attention
         }
         return colors.get(self.status, 'secondary')
+
+    def get_status_display(self):
+        """Get a user-friendly status display message"""
+        messages = {
+            'requested': 'New Request',
+            'assigned': 'Assigned to Technician',
+            'accepted': 'Accepted by Technician',
+            'scheduled': 'Visit Scheduled',
+            'pending_approval': 'Awaiting Start Authorization',
+            'working': 'Work in Progress',
+            'completed': 'Work Completed',
+            'closed': 'Request Closed',
+            'rejected': 'Request Rejected',
+            'on_hold': 'Work On Hold',
+            'reopened': 'Request Reopened'
+        }
+        return messages.get(self.status, self.status.title())
 
     def get_allowed_actions(self, user_role):
         """Get allowed actions based on current status and user role"""
@@ -129,9 +146,7 @@ class ServiceRequest(db.Model):
             elif self.status == 'accepted':
                 actions.extend([('schedule', 'Schedule Visit', 'primary')])
             elif self.status == 'scheduled':
-                actions.extend([('request_approval', 'Request Approval', 'primary')])
-            elif self.status == 'pending_approval':
-                actions.extend([('start_work', 'Start Working', 'primary')])
+                actions.extend([('request_approval', 'Request Start Authorization', 'primary')])
             elif self.status == 'working':
                 actions.extend([
                     ('complete', 'Mark as Complete', 'success'),
@@ -140,13 +155,13 @@ class ServiceRequest(db.Model):
             elif self.status == 'on_hold':
                 actions.extend([('resume', 'Resume Work', 'primary')])
             elif self.status == 'reopened':
-                actions.extend([('schedule', 'Reschedule Visit', 'primary')])
+                actions.extend([('schedule', 'Schedule New Visit', 'primary')])
         
         elif user_role == 'college_admin':
             if self.status == 'pending_approval':
                 actions.extend([
-                    ('approve', 'Approve Start', 'success'),
-                    ('reschedule', 'Reschedule', 'warning')
+                    ('approve_start', 'Authorize Work Start', 'success'),
+                    ('reschedule', 'Request Different Time', 'warning')
                 ])
             elif self.status == 'completed':
                 actions.extend([

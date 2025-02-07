@@ -102,14 +102,14 @@
                     <h5 class="mb-0">Current Information</h5>
                 </div>
                 <div class="card-body">
-                    <dl class="row mb-0">
+                    <dl class="row">
                         <dt class="col-sm-4">Title</dt>
                         <dd class="col-sm-8">{{ request.title }}</dd>
 
                         <dt class="col-sm-4">Status</dt>
                         <dd class="col-sm-8">
                             <span class="badge bg-{{ request.get_status_badge_color() }}">
-                                {{ request.status|title }}
+                                {{ request.get_status_display() }}
                             </span>
                         </dd>
 
