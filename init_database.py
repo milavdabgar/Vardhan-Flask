@@ -4,6 +4,15 @@ from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash
 
 def init_database():
+    # Define equipment types
+    equipment_types = [
+        "Computer",
+        "Printer",
+        "Air Conditioner",
+        "Projector",
+        "Laboratory Equipment"
+    ]
+    
     app = create_app()
     with app.app_context():
         # Create system admin
@@ -81,8 +90,54 @@ def init_database():
         # Commit to get IDs
         db.session.commit()
 
-        # Clear existing assignments
+        # Create AMC contracts first
+        contracts = {}
+        for i, college in enumerate(colleges):
+            contract = AMCContract.query.filter_by(
+                institution=college,
+                contract_number=f"AMC{2025}{i+1:03d}"
+            ).first()
+
+            if contract is None:
+                start_date = datetime(2025, 1, 1)
+                contract = AMCContract(
+                    institution=college,
+                    contract_number=f"AMC{2025}{i+1:03d}",
+                    contract_type='Computer and Printers',
+                    start_date=start_date,
+                    end_date=start_date + timedelta(days=365),
+                    contract_value=100000 + (i * 25000),
+                    status='ACTIVE',
+                    created_by=admin.id
+                )
+                db.session.add(contract)
+                db.session.flush()  # This will assign the ID to contract
+                print(f'Created AMC contract for {college}')
+
+                # Create equipment for this contract
+                for j, eq_type in enumerate(equipment_types):
+                    for k in range(1, 4):  # 3 pieces of each equipment type
+                        equipment = Equipment(
+                            name=f"{eq_type} {k}",
+                            type=eq_type.upper(),
+                            make="Vardhan Systems",
+                            model=f"MDL{j+1}{k:02d}",
+                            serial_number=f"SN{j+1}{k:03d}-{i+1}",
+                            installation_date=start_date - timedelta(days=365),
+                            location=f"Room {k:02d}, Block {chr(65+j)}",
+                            status='ACTIVE',
+                            specifications=f"Standard {eq_type} specifications",
+                            contract_id=contract.id
+                        )
+                        db.session.add(equipment)
+                        print(f'Created {eq_type} equipment for {college}')
+            contracts[college] = contract
+
+        # Clear existing data
         TechnicianAssignment.query.delete()
+        Equipment.query.delete()
+        AMCContract.query.delete()
+        db.session.commit()
 
         # Create technician assignments
         # Get all existing technicians
@@ -91,6 +146,7 @@ def init_database():
         existing_sr_techs = [tech for tech in User.query.filter_by(role="technician").all() 
                            if tech.email.startswith("srtech")]
 
+        # Now create technician assignments
         assignments = [
             # Engineering College
             (existing_jr_techs[0], colleges[0], False),
@@ -109,9 +165,10 @@ def init_database():
         ]
 
         for tech, college, is_senior in assignments:
+            contract = contracts[college]
             assignment = TechnicianAssignment(
                 technician_id=tech.id,
-                college=college,
+                contract_id=contract.id,
                 is_senior=is_senior
             )
             db.session.add(assignment)

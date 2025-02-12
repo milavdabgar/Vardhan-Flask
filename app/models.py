@@ -40,16 +40,17 @@ def load_user(id):
 
 class TechnicianAssignment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    technician_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    college = db.Column(db.String(200), nullable=False)
+    technician_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_ta_technician'), nullable=False)
+    contract_id = db.Column(db.Integer, db.ForeignKey('amc_contract.id', name='fk_ta_contract'), nullable=False)
     is_senior = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Relationship
-    technician = db.relationship('User', backref='college_assignments')
+    # Relationships
+    technician = db.relationship('User', backref='contract_assignments')
+    contract = db.relationship('AMCContract', backref='technician_assignments')
 
     def __repr__(self):
-        return f'<TechnicianAssignment {self.technician.full_name} - {self.college}>'
+        return f'<TechnicianAssignment {self.technician.full_name} - {self.contract.contract_number}>'
 
 class ServiceRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)

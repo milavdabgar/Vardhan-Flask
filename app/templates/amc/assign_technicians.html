@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Assign Technicians to Contract</h2>
+    <div class="card">
+        <div class="card-header">
+            <h5>Contract Details</h5>
+        </div>
+        <div class="card-body">
+            <p><strong>Contract Number:</strong> {{ contract.contract_number }}</p>
+            <p><strong>Institution:</strong> {{ contract.institution }}</p>
+            <p><strong>Type:</strong> {{ contract.contract_type }}</p>
+            <p><strong>Status:</strong> {{ contract.status }}</p>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5>Assign Technicians</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="form-group mb-3">
+                    {{ form.junior_technician.label(class="form-label") }}
+                    {{ form.junior_technician(class="form-select") }}
+                    {% for error in form.junior_technician.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                    {% endfor %}
+                </div>
+                <div class="form-group mb-3">
+                    {{ form.senior_technician.label(class="form-label") }}
+                    {{ form.senior_technician(class="form-select") }}
+                    {% for error in form.senior_technician.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                    {% endfor %}
+                </div>
+                <div class="mt-3">
+                    {{ form.submit(class="btn btn-primary") }}
+                    <a href="{{ url_for('amc.view_contract', id=contract.id) }}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

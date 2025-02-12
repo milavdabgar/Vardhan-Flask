@@ -27,9 +27,7 @@ ENV/
 21f1005510-mad1/
 
 # Flask
-instance/
 .webassets-cache
-*.db
 
 # VS Code
 .vscode/
@@ -54,10 +52,6 @@ logs/
 # System Files
 .DS_Store
 Thumbs.db
-
-# Migration Files
-migrations/versions/
-migrations/__pycache__/
 
 # Other
 *.bak

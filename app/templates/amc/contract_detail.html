@@ -92,13 +92,46 @@
                 </div>
             </div>
             
-            <div class="card">
+            <div class="card mb-4">
                 <div class="card-body">
                     <h5 class="card-title">Contract Status</h5>
                     <div class="mb-2">
                         <strong>Created:</strong> {{ contract.created_at.strftime('%Y-%m-%d') }}
                     </div>
                     <div class="mb-2">
+                        <strong>Status:</strong>
+                        <span class="badge bg-{{ 'success' if contract.status == 'ACTIVE' else 'danger' }}">{{ contract.status }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Assigned Technicians</h5>
+                    {% if current_user.is_admin() %}
+                    <a href="{{ url_for('amc.assign_technicians', contract_id=contract.id) }}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-user-plus"></i> Manage
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% set assignments = contract.technician_assignments %}
+                    {% if assignments %}
+                        {% for assignment in assignments %}
+                        <div class="mb-2">
+                            <strong>{{ 'Senior' if assignment.is_senior else 'Junior' }} Technician:</strong><br>
+                            {{ assignment.technician.full_name }}<br>
+                            <small class="text-muted">{{ assignment.technician.contact_number }}</small>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No technicians assigned</p>
+                    {% endif %}
+                    <a href="{{ url_for('amc.view_assignments', contract_id=contract.id) }}" class="btn btn-outline-primary btn-sm mt-2">
+                        View Details
+                    </a>
+                </div>
+            </div>
                         <strong>Last Updated:</strong> {{ contract.updated_at.strftime('%Y-%m-%d') }}
                     </div>
                     <div>
