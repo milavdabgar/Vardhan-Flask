@@ -1,7 +1,7 @@
 from app import create_app, db
-from app.models import User, TechnicianAssignment
-from werkzeug.security import generate_password_hash
+from app.models import User, TechnicianAssignment, AMCContract, Equipment
 from datetime import datetime, timedelta
+from werkzeug.security import generate_password_hash
 
 def init_database():
     app = create_app()
@@ -116,6 +116,55 @@ def init_database():
             )
             db.session.add(assignment)
             print(f'Created assignment: {tech.full_name} -> {college} ({"Senior" if is_senior else "Junior"})')
+
+        # Create sample AMC contracts
+        equipment_types = [
+            "Computer",
+            "Printer",
+            "Air Conditioner",
+            "Projector",
+            "Laboratory Equipment"
+        ]
+
+        for i, college in enumerate(colleges):
+            contract = AMCContract.query.filter_by(
+                institution=college,
+                contract_number=f"AMC{2025}{i+1:03d}"
+            ).first()
+
+            if contract is None:
+                start_date = datetime(2025, 1, 1)
+                contract = AMCContract(
+                    institution=college,
+                    contract_number=f"AMC{2025}{i+1:03d}",
+                    contract_type='Computer and Printers',
+                    start_date=start_date,
+                    end_date=start_date + timedelta(days=365),
+                    contract_value=100000 + (i * 25000),
+                    status='ACTIVE',
+                    created_by=admin.id
+                )
+                db.session.add(contract)
+                db.session.flush()  # This will assign the ID to contract
+                print(f'Created AMC contract for {college}')
+
+                # Create equipment for each contract
+                for j, eq_type in enumerate(equipment_types):
+                    for k in range(1, 4):  # 3 pieces of each equipment type
+                        equipment = Equipment(
+                            name=f"{eq_type} {k}",
+                            type=eq_type.upper(),
+                            make="Vardhan Systems",
+                            model=f"MDL{j+1}{k:02d}",
+                            serial_number=f"SN{j+1}{k:03d}-{i+1}",
+                            installation_date=start_date - timedelta(days=365),
+                            location=f"Room {k:02d}, Block {chr(65+j)}",
+                            status='ACTIVE',
+                            specifications=f"Standard {eq_type} specifications",
+                            contract_id=contract.id
+                        )
+                        db.session.add(equipment)
+                        print(f'Created {eq_type} equipment for {college}')
 
         db.session.commit()
 
