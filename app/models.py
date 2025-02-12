@@ -57,13 +57,34 @@ class ServiceRequest(db.Model):
     ticket_number = db.Column(db.String(20), unique=True, nullable=False)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
-    equipment_type = db.Column(db.String(50))  # computer, printer, cctv, etc.
+    # Problem Categorization
+    problem_category = db.Column(db.String(50))  # Single Equipment, Network, WiFi, CCTV, Infrastructure
+    equipment_type = db.Column(db.String(50))  # Only for Single Equipment issues
+    
+    # Contract and Equipment Relations
+    contract_id = db.Column(db.Integer, db.ForeignKey('amc_contract.id', name='fk_sr_contract'))
+    equipment_id = db.Column(db.Integer, db.ForeignKey('equipment.id', name='fk_sr_equipment'))
+    contract = db.relationship('AMCContract', backref='service_requests')
+    equipment = db.relationship('Equipment', backref='service_requests')
+    
+    # Issue Details
     priority = db.Column(db.String(20))  # low, medium, high, urgent
     status = db.Column(db.String(20), default='NEW', nullable=False)  # NEW, SCHEDULED, VISITED, ON_HOLD, RESOLVED, REOPENED, CLOSED
+    issue_type = db.Column(db.String(50))  # Specific to each problem category (e.g., No Signal, Slow Speed)
+    issue_frequency = db.Column(db.String(50))  # Constant, Intermittent, Time-specific
+    affected_users = db.Column(db.Integer)  # For network/infrastructure issues
+    last_working_time = db.Column(db.DateTime)  # When the service/equipment last worked
+    
+    # Location Details
+    institution = db.Column(db.String(200), nullable=False)
+    building = db.Column(db.String(100))
+    floor = db.Column(db.String(50))
+    room = db.Column(db.String(50))
+    area_details = db.Column(db.Text)
+    
+    # Assignment
     created_by = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_sr_created_by'), nullable=False)
     assigned_to = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_sr_assigned_to'))
-    institution = db.Column(db.String(200), nullable=False)
-    location_details = db.Column(db.String(200))
 
     # Scheduling fields
     scheduled_date = db.Column(db.Date)

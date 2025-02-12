@@ -6,7 +6,8 @@
     
     <div class="card mt-4">
         <div class="card-body">
-            <form method="POST">
+            <form method="POST" id="serviceRequestForm">
+                <!-- Basic Info -->
                 <div class="mb-3">
                     <label for="title" class="form-label">Title</label>
                     <input type="text" class="form-control" id="title" name="title" required
@@ -19,33 +20,123 @@
                               placeholder="Detailed description of the issue"></textarea>
                 </div>
                 
-                <div class="row">
+                <!-- Problem Category Selection -->
+                <div class="row mb-3">
                     <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="equipment_type" class="form-label">Equipment Type</label>
-                            <select class="form-select" id="equipment_type" name="equipment_type" required>
-                                <option value="">Select equipment type</option>
-                                <option value="computer">Computer</option>
-                                <option value="printer">Printer</option>
-                                <option value="network">Network Equipment</option>
-                                <option value="software">Software</option>
-                                <option value="other">Other</option>
-                            </select>
-                        </div>
+                        <label for="problem_category" class="form-label">Problem Category</label>
+                        <select class="form-select" id="problem_category" name="problem_category" required>
+                            <option value="">Select category</option>
+                            <option value="single_equipment">Single Equipment Issue</option>
+                            <option value="network">Network Connectivity</option>
+                            <option value="wifi">WiFi Coverage</option>
+                            <option value="cctv">CCTV System</option>
+                            <option value="infrastructure">Infrastructure</option>
+                        </select>
                     </div>
                     
                     <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="priority" class="form-label">Priority</label>
-                            <select class="form-select" id="priority" name="priority" required>
-                                <option value="">Select priority</option>
-                                <option value="low">Low</option>
-                                <option value="medium">Medium</option>
-                                <option value="high">High</option>
-                                <option value="urgent">Urgent</option>
+                        <label for="priority" class="form-label">Priority</label>
+                        <select class="form-select" id="priority" name="priority" required>
+                            <option value="">Select priority</option>
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="urgent">Urgent</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Single Equipment Fields -->
+                <div id="single_equipment_fields" class="d-none">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="contract_id" class="form-label">AMC Contract</label>
+                            <select class="form-select" id="contract_id" name="contract_id">
+                                <option value="">Select contract</option>
+                                {% for contract in contracts %}
+                                <option value="{{ contract.id }}">{{ contract.contract_number }} ({{ contract.contract_type }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="equipment_id" class="form-label">Equipment</label>
+                            <select class="form-select" id="equipment_id" name="equipment_id">
+                                <option value="">Select equipment</option>
+                                <!-- Add equipment dynamically based on contract -->
                             </select>
                         </div>
                     </div>
+                </div>
+                
+                <!-- Network/WiFi Fields -->
+                <div id="network_fields" class="d-none">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="issue_type" class="form-label">Issue Type</label>
+                            <select class="form-select" id="issue_type" name="issue_type">
+                                <option value="">Select issue type</option>
+                                <!-- Network Issues -->
+                                <optgroup label="Network Issues" class="network-issues">
+                                    <option value="no_internet">No Internet Connection</option>
+                                    <option value="slow_speed">Slow Network Speed</option>
+                                    <option value="intermittent">Intermittent Connection</option>
+                                    <option value="dns_issue">DNS Resolution Problem</option>
+                                </optgroup>
+                                <!-- WiFi Issues -->
+                                <optgroup label="WiFi Issues" class="wifi-issues">
+                                    <option value="no_wifi">No WiFi Signal</option>
+                                    <option value="weak_signal">Weak WiFi Signal</option>
+                                    <option value="authentication">WiFi Authentication Error</option>
+                                    <option value="frequent_disconnect">Frequent Disconnection</option>
+                                </optgroup>
+                                <!-- CCTV Issues -->
+                                <optgroup label="CCTV Issues" class="cctv-issues">
+                                    <option value="no_feed">No Camera Feed</option>
+                                    <option value="poor_quality">Poor Video Quality</option>
+                                    <option value="recording_issue">Recording Not Working</option>
+                                    <option value="playback_issue">Playback Problems</option>
+                                </optgroup>
+                                <!-- Infrastructure Issues -->
+                                <optgroup label="Infrastructure Issues" class="infrastructure-issues">
+                                    <option value="cable_damage">Cable/Wire Damage</option>
+                                    <option value="port_issue">Network Port Problem</option>
+                                    <option value="ups_issue">UPS/Power Issue</option>
+                                    <option value="rack_issue">Network Rack Problem</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="affected_users" class="form-label">Affected Users</label>
+                            <input type="number" class="form-control" id="affected_users" name="affected_users"
+                                   placeholder="Number of users affected">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Location Fields -->
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="building" class="form-label">Building</label>
+                        <input type="text" class="form-control" id="building" name="building"
+                               placeholder="Building name/number">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="floor" class="form-label">Floor</label>
+                        <input type="text" class="form-control" id="floor" name="floor"
+                               placeholder="Floor number">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="room" class="form-label">Room/Lab</label>
+                        <input type="text" class="form-control" id="room" name="room"
+                               placeholder="Room/Lab number">
+                    </div>
+                </div>
+                
+                <!-- Additional Details -->
+                <div class="mb-3">
+                    <label for="area_details" class="form-label">Additional Location Details</label>
+                    <textarea class="form-control" id="area_details" name="area_details" rows="2"
+                              placeholder="Any additional details about the location"></textarea>
                 </div>
                 
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end">
@@ -56,4 +147,89 @@
         </div>
     </div>
 </div>
+
+<!-- Add JavaScript for dynamic form fields -->
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const problemCategory = document.getElementById('problem_category');
+    const singleEquipmentFields = document.getElementById('single_equipment_fields');
+    const networkFields = document.getElementById('network_fields');
+    const issueTypeSelect = document.getElementById('issue_type');
+    
+    // Hide all issue type groups initially
+    function hideAllIssueTypes() {
+        const optgroups = issueTypeSelect.getElementsByTagName('optgroup');
+        for (let group of optgroups) {
+            group.style.display = 'none';
+        }
+        issueTypeSelect.value = '';
+    }
+    
+    // Show specific issue type group
+    function showIssueTypeGroup(className) {
+        const group = issueTypeSelect.getElementsByClassName(className)[0];
+        if (group) {
+            group.style.display = '';
+        }
+    }
+    
+    problemCategory.addEventListener('change', function() {
+        // Hide all conditional fields first
+        singleEquipmentFields.classList.add('d-none');
+        networkFields.classList.add('d-none');
+        hideAllIssueTypes();
+        
+        // Show relevant fields based on selection
+        switch(this.value) {
+            case 'single_equipment':
+                singleEquipmentFields.classList.remove('d-none');
+                break;
+            case 'network':
+                networkFields.classList.remove('d-none');
+                showIssueTypeGroup('network-issues');
+                break;
+            case 'wifi':
+                networkFields.classList.remove('d-none');
+                showIssueTypeGroup('wifi-issues');
+                break;
+            case 'cctv':
+                networkFields.classList.remove('d-none');
+                showIssueTypeGroup('cctv-issues');
+                break;
+            case 'infrastructure':
+                networkFields.classList.remove('d-none');
+                showIssueTypeGroup('infrastructure-issues');
+                break;
+        }
+    });
+    
+    // Hide all issue types on initial load
+    hideAllIssueTypes();
+    
+    // Add contract change listener to load equipment
+    const contractSelect = document.getElementById('contract_id');
+    const equipmentSelect = document.getElementById('equipment_id');
+    
+    contractSelect.addEventListener('change', function() {
+        // Clear equipment select
+        equipmentSelect.innerHTML = '<option value="">Select equipment</option>';
+        
+        if (this.value) {
+            // Fetch equipment for selected contract
+            fetch(`/api/contract/${this.value}/equipment`)
+                .then(response => response.json())
+                .then(data => {
+                    data.forEach(equipment => {
+                        const option = document.createElement('option');
+                        option.value = equipment.id;
+                        option.textContent = `${equipment.name} (${equipment.type})`;
+                        equipmentSelect.appendChild(option);
+                    });
+                });
+        }
+    });
+});
+</script>
+{% endblock %}
 {% endblock %}

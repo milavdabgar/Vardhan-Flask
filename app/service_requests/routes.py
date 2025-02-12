@@ -1,8 +1,11 @@
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app.service_requests import bp
-from app.models import ServiceRequest, User, TicketUpdate, RequestFeedback, TechnicianAssignment
 from app import db
+from app.models import (
+    ServiceRequest, User, TicketUpdate, RequestFeedback,
+    TechnicianAssignment, AMCContract, Equipment
+)
 from datetime import datetime, timedelta
 
 def generate_ticket_number():
@@ -38,39 +41,57 @@ def create_request():
         return redirect(url_for('main.index'))
     
     if request.method == 'POST':
-        # Create new service request
+        # Create new service request with basic info
         service_request = ServiceRequest(
             title=request.form['title'],
             description=request.form['description'],
-            equipment_type=request.form['equipment_type'],
             priority=request.form['priority'],
             institution=current_user.institution,
             created_by=current_user.id,
             status='NEW',
             created_at=datetime.utcnow(),
-            ticket_number=generate_ticket_number()
+            ticket_number=generate_ticket_number(),
+            problem_category=request.form['problem_category']
         )
         
-        # Auto-assign to Jr. Technician
-        # First get the active contract for the institution
-        from app.models import AMCContract
-        active_contract = AMCContract.query.filter_by(
-            institution=current_user.institution,
-            status='ACTIVE'
-        ).first()
+        # Handle location details
+        service_request.building = request.form.get('building')
+        service_request.floor = request.form.get('floor')
+        service_request.room = request.form.get('room')
+        service_request.area_details = request.form.get('area_details')
         
-        jr_tech = None
-        if active_contract:
-            # Find a junior technician assigned to this contract
+        # Handle category-specific fields
+        if service_request.problem_category == 'single_equipment':
+            service_request.contract_id = request.form.get('contract_id')
+            service_request.equipment_id = request.form.get('equipment_id')
+            service_request.equipment_type = Equipment.query.get(request.form.get('equipment_id')).type
+        
+        elif service_request.problem_category in ['network', 'wifi']:
+            service_request.issue_type = request.form.get('issue_type')
+            service_request.affected_users = request.form.get('affected_users')
+            
+            # For network/wifi issues, get the contract automatically
+            active_contract = AMCContract.query.filter_by(
+                institution=current_user.institution,
+                status='ACTIVE',
+                contract_type='network'
+            ).first()
+            if active_contract:
+                service_request.contract_id = active_contract.id
+        
+        # Auto-assign to Jr. Technician based on contract
+        if service_request.contract_id:
             jr_tech = User.query.join(TechnicianAssignment).filter(
-                TechnicianAssignment.contract_id == active_contract.id,
+                TechnicianAssignment.contract_id == service_request.contract_id,
                 TechnicianAssignment.is_senior == False
             ).first()
-        
-        if jr_tech:
-            service_request.assigned_to = jr_tech.id
+            
+            if jr_tech:
+                service_request.assigned_to = jr_tech.id
+            else:
+                flash('No junior technician assigned to this contract. Request will be pending assignment.', 'warning')
         else:
-            flash('No junior technician assigned to your college. Request will be pending assignment.', 'warning')
+            flash('No active contract found for this type of service. Request will be pending assignment.', 'warning')
         
         db.session.add(service_request)
         db.session.commit()
@@ -78,7 +99,7 @@ def create_request():
         update = TicketUpdate(
             service_request_id=service_request.id,
             update_type='status_change',
-            comment='Service request created and auto-assigned to junior technician',
+            comment='Service request created',
             updated_by=current_user.id
         )
         db.session.add(update)
@@ -87,7 +108,15 @@ def create_request():
         flash('Service request created successfully.', 'success')
         return redirect(url_for('service_requests.list_requests'))
     
-    return render_template('service_requests/create_request.html', title='New Service Request')
+    # Get active contracts for the institution
+    active_contracts = AMCContract.query.filter_by(
+        institution=current_user.institution,
+        status='ACTIVE'
+    ).all()
+    
+    return render_template('service_requests/create_request.html', 
+                          title='New Service Request',
+                          contracts=active_contracts)
 
 @bp.route('/request/<int:request_id>')
 @login_required
@@ -110,6 +139,13 @@ def view_request(request_id):
 def update_request(request_id):
     service_request = ServiceRequest.query.get_or_404(request_id)
     
+    # Get contracts for the institution
+    from app.models import AMCContract
+    contracts = AMCContract.query.filter_by(
+        institution=current_user.institution,
+        status='ACTIVE'
+    ).all()
+    
     # Access control
     if current_user.role == 'college_admin' and service_request.institution != current_user.institution:
         flash('Access denied. You can only update requests from your institution.', 'danger')
@@ -129,11 +165,51 @@ def update_request(request_id):
                 flash('Can only edit requests in NEW state that you created.', 'danger')
                 return redirect(url_for('service_requests.view_request', request_id=request_id))
                 
+            # Update basic info
             service_request.title = request.form.get('title', service_request.title)
             service_request.description = request.form.get('description', service_request.description)
-            service_request.equipment_type = request.form.get('equipment_type', service_request.equipment_type)
             service_request.priority = request.form.get('priority', service_request.priority)
-            comment = 'Request details updated'
+            service_request.problem_category = request.form.get('problem_category', service_request.problem_category)
+            
+            # Update location details
+            service_request.building = request.form.get('building')
+            service_request.floor = request.form.get('floor')
+            service_request.room = request.form.get('room')
+            service_request.area_details = request.form.get('area_details')
+            
+            # Handle category-specific fields
+            if service_request.problem_category == 'single_equipment':
+                service_request.contract_id = request.form.get('contract_id')
+                service_request.equipment_id = request.form.get('equipment_id')
+                if service_request.equipment_id:
+                    service_request.equipment_type = Equipment.query.get(service_request.equipment_id).type
+            
+            elif service_request.problem_category in ['network', 'wifi', 'cctv', 'infrastructure']:
+                service_request.issue_type = request.form.get('issue_type')
+                service_request.affected_users = request.form.get('affected_users')
+                
+                # For network/wifi issues, get the contract automatically
+                if service_request.problem_category in ['network', 'wifi']:
+                    active_contract = AMCContract.query.filter_by(
+                        institution=current_user.institution,
+                        status='ACTIVE',
+                        contract_type='network'
+                    ).first()
+                    if active_contract:
+                        service_request.contract_id = active_contract.id
+            
+            # Auto-assign to Jr. Technician based on contract if not already assigned
+            if service_request.contract_id and not service_request.assigned_to:
+                jr_tech = User.query.join(TechnicianAssignment).filter(
+                    TechnicianAssignment.contract_id == service_request.contract_id,
+                    TechnicianAssignment.is_senior == False
+                ).first()
+                
+                if jr_tech:
+                    service_request.assigned_to = jr_tech.id
+                    comment = 'Request details updated and assigned to junior technician'
+                else:
+                    comment = 'Request details updated (no junior technician available for assignment)'
             
         elif action in ['schedule', 'reschedule'] and current_user.role == 'technician':
             # Validate required fields
@@ -299,7 +375,45 @@ def update_request(request_id):
     return render_template('service_requests/update_request.html',
                          title=f'Update Request #{service_request.ticket_number}',
                          request=service_request,
+                         contracts=contracts,
+                         status_colors={
+                             'NEW': 'info',
+                             'ASSIGNED': 'primary',
+                             'SCHEDULED': 'warning',
+                             'VISITED': 'secondary',
+                             'RESOLVED': 'success',
+                             'CLOSED': 'dark',
+                             'ON_HOLD': 'danger'
+                         },
+                         priority_colors={
+                             'low': 'success',
+                             'medium': 'warning',
+                             'high': 'danger',
+                             'urgent': 'danger'
+                         },
                          now=datetime.now())
+
+# API endpoint to get equipment for a contract
+@bp.route('/api/contract/<int:contract_id>/equipment')
+@login_required
+def get_contract_equipment(contract_id):
+    # Verify user has access to this contract
+    contract = AMCContract.query.filter_by(
+        id=contract_id,
+        institution=current_user.institution
+    ).first_or_404()
+    
+    equipment = Equipment.query.filter_by(
+        contract_id=contract_id,
+        status='ACTIVE'
+    ).all()
+    
+    return jsonify([{
+        'id': e.id,
+        'name': e.name,
+        'type': e.type,
+        'location': e.location
+    } for e in equipment])
 
 # Background task to auto-close resolved requests and assign 5-star ratings
 @bp.route('/auto_close_resolved', methods=['POST'])

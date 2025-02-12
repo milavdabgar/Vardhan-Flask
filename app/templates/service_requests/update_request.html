@@ -16,32 +16,143 @@
                                 {# College Admin - Edit Request Form #}
                                 <div class="mb-3">
                                     <h5>Edit Request Details</h5>
+                                    <!-- Basic Info -->
                                     <div class="mb-3">
                                         <label for="title" class="form-label">Title</label>
                                         <input type="text" class="form-control" id="title" name="title" 
                                                value="{{ request.title }}" required>
                                     </div>
+                                    
                                     <div class="mb-3">
                                         <label for="description" class="form-label">Description</label>
                                         <textarea class="form-control" id="description" name="description" 
-                                                  rows="3" required>{{ request.description }}</textarea>
+                                                  rows="4" required>{{ request.description }}</textarea>
                                     </div>
-                                    <div class="mb-3">
-                                        <label for="equipment_type" class="form-label">Equipment Type</label>
-                                        <select class="form-select" id="equipment_type" name="equipment_type" required>
-                                            <option value="Computer" {% if request.equipment_type == 'Computer' %}selected{% endif %}>Computer</option>
-                                            <option value="Printer" {% if request.equipment_type == 'Printer' %}selected{% endif %}>Printer</option>
-                                            <option value="Network" {% if request.equipment_type == 'Network' %}selected{% endif %}>Network</option>
-                                            <option value="Other" {% if request.equipment_type == 'Other' %}selected{% endif %}>Other</option>
-                                        </select>
+                                    
+                                    <!-- Problem Category Selection -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="problem_category" class="form-label">Problem Category</label>
+                                            <select class="form-select" id="problem_category" name="problem_category" required>
+                                                <option value="">Select category</option>
+                                                <option value="single_equipment" {% if request.problem_category == 'single_equipment' %}selected{% endif %}>Single Equipment Issue</option>
+                                                <option value="network" {% if request.problem_category == 'network' %}selected{% endif %}>Network Connectivity</option>
+                                                <option value="wifi" {% if request.problem_category == 'wifi' %}selected{% endif %}>WiFi Coverage</option>
+                                                <option value="cctv" {% if request.problem_category == 'cctv' %}selected{% endif %}>CCTV System</option>
+                                                <option value="infrastructure" {% if request.problem_category == 'infrastructure' %}selected{% endif %}>Infrastructure</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="col-md-6">
+                                            <label for="priority" class="form-label">Priority</label>
+                                            <select class="form-select" id="priority" name="priority" required>
+                                                <option value="">Select priority</option>
+                                                <option value="low" {% if request.priority == 'low' %}selected{% endif %}>Low</option>
+                                                <option value="medium" {% if request.priority == 'medium' %}selected{% endif %}>Medium</option>
+                                                <option value="high" {% if request.priority == 'high' %}selected{% endif %}>High</option>
+                                                <option value="urgent" {% if request.priority == 'urgent' %}selected{% endif %}>Urgent</option>
+                                            </select>
+                                        </div>
                                     </div>
+                                    </div>
+                                    
+                                    <!-- Single Equipment Fields -->
+                                    <div id="single_equipment_fields" class="d-none">
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <label for="contract_id" class="form-label">AMC Contract</label>
+                                                <select class="form-select" id="contract_id" name="contract_id">
+                                                    <option value="">Select contract</option>
+                                                    {% for contract in contracts %}
+                                                    <option value="{{ contract.id }}" {% if request.contract_id == contract.id %}selected{% endif %}>
+                                                        {{ contract.contract_number }} ({{ contract.contract_type }})
+                                                    </option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="equipment_id" class="form-label">Equipment</label>
+                                                <select class="form-select" id="equipment_id" name="equipment_id">
+                                                    <option value="">Select equipment</option>
+                                                    {% if request.equipment %}
+                                                    <option value="{{ request.equipment.id }}" selected>
+                                                        {{ request.equipment.name }} ({{ request.equipment.type }})
+                                                    </option>
+                                                    {% endif %}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Network/WiFi Fields -->
+                                    <div id="network_fields" class="d-none">
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <label for="issue_type" class="form-label">Issue Type</label>
+                                                <select class="form-select" id="issue_type" name="issue_type">
+                                                    <option value="">Select issue type</option>
+                                                    <!-- Network Issues -->
+                                                    <optgroup label="Network Issues" class="network-issues">
+                                                        <option value="no_internet" {% if request.issue_type == 'no_internet' %}selected{% endif %}>No Internet Connection</option>
+                                                        <option value="slow_speed" {% if request.issue_type == 'slow_speed' %}selected{% endif %}>Slow Network Speed</option>
+                                                        <option value="intermittent" {% if request.issue_type == 'intermittent' %}selected{% endif %}>Intermittent Connection</option>
+                                                        <option value="dns_issue" {% if request.issue_type == 'dns_issue' %}selected{% endif %}>DNS Resolution Problem</option>
+                                                    </optgroup>
+                                                    <!-- WiFi Issues -->
+                                                    <optgroup label="WiFi Issues" class="wifi-issues">
+                                                        <option value="no_wifi" {% if request.issue_type == 'no_wifi' %}selected{% endif %}>No WiFi Signal</option>
+                                                        <option value="weak_signal" {% if request.issue_type == 'weak_signal' %}selected{% endif %}>Weak WiFi Signal</option>
+                                                        <option value="authentication" {% if request.issue_type == 'authentication' %}selected{% endif %}>WiFi Authentication Error</option>
+                                                        <option value="frequent_disconnect" {% if request.issue_type == 'frequent_disconnect' %}selected{% endif %}>Frequent Disconnection</option>
+                                                    </optgroup>
+                                                    <!-- CCTV Issues -->
+                                                    <optgroup label="CCTV Issues" class="cctv-issues">
+                                                        <option value="no_feed" {% if request.issue_type == 'no_feed' %}selected{% endif %}>No Camera Feed</option>
+                                                        <option value="poor_quality" {% if request.issue_type == 'poor_quality' %}selected{% endif %}>Poor Video Quality</option>
+                                                        <option value="recording_issue" {% if request.issue_type == 'recording_issue' %}selected{% endif %}>Recording Not Working</option>
+                                                        <option value="playback_issue" {% if request.issue_type == 'playback_issue' %}selected{% endif %}>Playback Problems</option>
+                                                    </optgroup>
+                                                    <!-- Infrastructure Issues -->
+                                                    <optgroup label="Infrastructure Issues" class="infrastructure-issues">
+                                                        <option value="cable_damage" {% if request.issue_type == 'cable_damage' %}selected{% endif %}>Cable/Wire Damage</option>
+                                                        <option value="port_issue" {% if request.issue_type == 'port_issue' %}selected{% endif %}>Network Port Problem</option>
+                                                        <option value="ups_issue" {% if request.issue_type == 'ups_issue' %}selected{% endif %}>UPS/Power Issue</option>
+                                                        <option value="rack_issue" {% if request.issue_type == 'rack_issue' %}selected{% endif %}>Network Rack Problem</option>
+                                                    </optgroup>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="affected_users" class="form-label">Affected Users</label>
+                                                <input type="number" class="form-control" id="affected_users" name="affected_users"
+                                                       value="{{ request.affected_users }}" placeholder="Number of users affected">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Location Fields -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-4">
+                                            <label for="building" class="form-label">Building</label>
+                                            <input type="text" class="form-control" id="building" name="building"
+                                                   value="{{ request.building }}" placeholder="Building name/number">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="floor" class="form-label">Floor</label>
+                                            <input type="text" class="form-control" id="floor" name="floor"
+                                                   value="{{ request.floor }}" placeholder="Floor number">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="room" class="form-label">Room/Lab</label>
+                                            <input type="text" class="form-control" id="room" name="room"
+                                                   value="{{ request.room }}" placeholder="Room/Lab number">
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Additional Details -->
                                     <div class="mb-3">
-                                        <label for="priority" class="form-label">Priority</label>
-                                        <select class="form-select" id="priority" name="priority" required>
-                                            <option value="Low" {% if request.priority == 'Low' %}selected{% endif %}>Low</option>
-                                            <option value="Medium" {% if request.priority == 'Medium' %}selected{% endif %}>Medium</option>
-                                            <option value="High" {% if request.priority == 'High' %}selected{% endif %}>High</option>
-                                        </select>
+                                        <label for="area_details" class="form-label">Additional Location Details</label>
+                                        <textarea class="form-control" id="area_details" name="area_details" rows="2"
+                                                  placeholder="Any additional details about the location">{{ request.area_details }}</textarea>
                                     </div>
                                 </div>
                                 <button type="submit" class="btn btn-{{ action_color }}" 
@@ -329,4 +440,87 @@
     color: #ffd700;
 }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const problemCategory = document.getElementById('problem_category');
+    const singleEquipmentFields = document.getElementById('single_equipment_fields');
+    const networkFields = document.getElementById('network_fields');
+    const issueTypeSelect = document.getElementById('issue_type');
+    
+    // Hide all issue type groups initially
+    function hideAllIssueTypes() {
+        const optgroups = issueTypeSelect.getElementsByTagName('optgroup');
+        for (let group of optgroups) {
+            group.style.display = 'none';
+        }
+    }
+    
+    // Show specific issue type group
+    function showIssueTypeGroup(className) {
+        const group = issueTypeSelect.getElementsByClassName(className)[0];
+        if (group) {
+            group.style.display = '';
+        }
+    }
+    
+    function updateVisibility() {
+        // Hide all conditional fields first
+        singleEquipmentFields.classList.add('d-none');
+        networkFields.classList.add('d-none');
+        hideAllIssueTypes();
+        
+        // Show relevant fields based on selection
+        switch(problemCategory.value) {
+            case 'single_equipment':
+                singleEquipmentFields.classList.remove('d-none');
+                break;
+            case 'network':
+                networkFields.classList.remove('d-none');
+                showIssueTypeGroup('network-issues');
+                break;
+            case 'wifi':
+                networkFields.classList.remove('d-none');
+                showIssueTypeGroup('wifi-issues');
+                break;
+            case 'cctv':
+                networkFields.classList.remove('d-none');
+                showIssueTypeGroup('cctv-issues');
+                break;
+            case 'infrastructure':
+                networkFields.classList.remove('d-none');
+                showIssueTypeGroup('infrastructure-issues');
+                break;
+        }
+    }
+    
+    problemCategory.addEventListener('change', updateVisibility);
+    
+    // Add contract change listener to load equipment
+    const contractSelect = document.getElementById('contract_id');
+    const equipmentSelect = document.getElementById('equipment_id');
+    
+    contractSelect.addEventListener('change', function() {
+        // Clear equipment select
+        equipmentSelect.innerHTML = '<option value="">Select equipment</option>';
+        
+        if (this.value) {
+            // Fetch equipment for selected contract
+            fetch(`/api/contract/${this.value}/equipment`)
+                .then(response => response.json())
+                .then(data => {
+                    data.forEach(equipment => {
+                        const option = document.createElement('option');
+                        option.value = equipment.id;
+                        option.textContent = `${equipment.name} (${equipment.type})`;
+                        equipmentSelect.appendChild(option);
+                    });
+                });
+        }
+    });
+    
+    // Show correct fields on page load
+    updateVisibility();
+});
+</script>
 {% endblock %}
