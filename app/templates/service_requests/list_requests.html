@@ -38,10 +38,13 @@
                             {% endif %}
                             <td>
                                 <span class="badge bg-{{ 
-                                    'warning' if request.status == 'open'
-                                    else 'info' if request.status == 'assigned'
-                                    else 'primary' if request.status == 'in_progress'
-                                    else 'success' if request.status == 'resolved'
+                                    'info' if request.status == 'NEW'
+                                    else 'primary' if request.status == 'SCHEDULED'
+                                    else 'warning' if request.status == 'VISITED'
+                                    else 'danger' if request.status == 'ON_HOLD'
+                                    else 'success' if request.status == 'RESOLVED'
+                                    else 'warning' if request.status == 'REOPENED'
+                                    else 'secondary' if request.status == 'CLOSED'
                                     else 'secondary'
                                 }}">
                                     {{ request.status|title }}
@@ -61,11 +64,39 @@
                             <td>
                                 <div class="btn-group">
                                     <a href="{{ url_for('service_requests.view_request', request_id=request.id) }}" 
-                                       class="btn btn-sm btn-outline-primary">View</a>
-                                    {% if current_user.role in ['admin', 'technician'] and request.status != 'resolved' %}
-                                    <a href="{{ url_for('service_requests.update_request', request_id=request.id) }}" 
-                                       class="btn btn-sm btn-outline-success">Update</a>
-                                    {% endif %}
+                                       class="btn btn-sm btn-outline-secondary">View</a>
+                                    
+                                    {% for action_id, action_label, action_color in request.get_allowed_actions(current_user) %}
+                                        {% if action_id == 'resolve' %}
+                                            <button type="button" class="btn btn-sm btn-{{ action_color }}" 
+                                                    data-bs-toggle="modal" data-bs-target="#resolveModal{{ request.id }}">
+                                                {{ action_label }}
+                                            </button>
+                                        {% elif action_id == 'close' %}
+                                            <button type="button" class="btn btn-sm btn-{{ action_color }}" 
+                                                    data-bs-toggle="modal" data-bs-target="#closeModal{{ request.id }}">
+                                                {{ action_label }}
+                                            </button>
+                                        {% elif action_id == 'edit' %}
+                                            <a href="{{ url_for('service_requests.update_request', request_id=request.id) }}" 
+                                               class="btn btn-sm btn-{{ action_color }}">
+                                                {{ action_label }}
+                                            </a>
+                                        {% elif action_id in ['schedule', 'reschedule'] %}
+                                            <button type="button" class="btn btn-sm btn-{{ action_color }}" 
+                                                    data-bs-toggle="modal" data-bs-target="#scheduleModal{{ request.id }}">
+                                                {{ action_label }}
+                                            </button>
+                                        {% elif action_id in ['mark_visited', 'reopen'] %}
+                                            <form method="POST" action="{{ url_for('service_requests.update_request', request_id=request.id) }}" 
+                                                  style="display: inline;">
+                                                <input type="hidden" name="action" value="{{ action_id }}">
+                                                <button type="submit" class="btn btn-sm btn-{{ action_color }}">
+                                                    {{ action_label }}
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    {% endfor %}
                                 </div>
                             </td>
                         </tr>
@@ -80,4 +111,178 @@
         </div>
     </div>
 </div>
+
+{# Resolution and Close Modals #}
+{% for request in requests %}
+    {% set actions = request.get_allowed_actions(current_user) %}
+    {% if ('resolve', 'Mark as Resolved', 'success') in actions %}
+    <div class="modal fade" id="resolveModal{{ request.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Resolve Request #{{ request.ticket_number }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="{{ url_for('service_requests.update_request', request_id=request.id) }}">
+                    <div class="modal-body">
+                        <input type="hidden" name="action" value="resolve">
+                        <div class="mb-3">
+                            <label for="resolution_notes" class="form-label">Resolution Notes</label>
+                            <textarea class="form-control" id="resolution_notes" name="resolution_notes" 
+                                      rows="3" required placeholder="Describe how the issue was resolved"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">Mark as Resolved</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    {# Close with Feedback Modal #}
+    {% if ('close', 'Close with Feedback', 'success') in actions %}
+    <div class="modal fade" id="closeModal{{ request.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Close Request #{{ request.ticket_number }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="{{ url_for('service_requests.update_request', request_id=request.id) }}">
+                    <div class="modal-body">
+                        <div class="alert alert-warning">
+                            <h6 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Important Notice</h6>
+                            <p class="mb-0">Please read carefully before closing this request:</p>
+                            <ul class="mb-0 mt-2">
+                                <li>Once closed, this request <strong>cannot be reopened</strong>.</li>
+                                <li>If you think you might need to reopen this request, click Cancel and keep it in RESOLVED state.</li>
+                                <li>RESOLVED requests can be reopened within 7 days.</li>
+                                <li>After 7 days in RESOLVED state, requests are automatically:
+                                    <ul>
+                                        <li>Assigned a 5-star rating</li>
+                                        <li>Marked as CLOSED</li>
+                                        <li>No longer eligible for reopening</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </div>
+                        <input type="hidden" name="action" value="close">
+                        <div class="mb-3">
+                            <label class="form-label">Rate the Service</label>
+                            <div class="rating">
+                                <input type="radio" id="star5{{ request.id }}" name="rating" value="5" checked>
+                                <label for="star5{{ request.id }}">★</label>
+                                <input type="radio" id="star4{{ request.id }}" name="rating" value="4">
+                                <label for="star4{{ request.id }}">★</label>
+                                <input type="radio" id="star3{{ request.id }}" name="rating" value="3">
+                                <label for="star3{{ request.id }}">★</label>
+                                <input type="radio" id="star2{{ request.id }}" name="rating" value="2">
+                                <label for="star2{{ request.id }}">★</label>
+                                <input type="radio" id="star1{{ request.id }}" name="rating" value="1">
+                                <label for="star1{{ request.id }}">★</label>
+                                <input type="hidden" name="rating" value="5" id="hiddenRating{{ request.id }}">
+                            </div>
+                            <script>
+                                document.querySelectorAll('input[name="rating"][type="radio"]').forEach(input => {
+                                    input.addEventListener('change', function() {
+                                        document.getElementById('hiddenRating{{ request.id }}').value = this.value;
+                                    });
+                                });
+                            </script>
+                        </div>
+                        <div class="mb-3">
+                            <label for="feedback" class="form-label">Feedback</label>
+                            <textarea class="form-control" id="feedback" name="feedback" 
+                                      rows="3" required placeholder="Please provide feedback about the service"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success" onclick="return confirm('Are you sure you want to close this request? This action cannot be undone.');">Submit & Close</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
+
+{# Schedule Visit Modal #}
+{% for request in requests %}
+    {% set actions = request.get_allowed_actions(current_user) %}
+    {% if ('schedule', 'Schedule Visit', 'primary') in actions or ('reschedule', 'Reschedule Visit', 'warning') in actions %}
+    <div class="modal fade" id="scheduleModal{{ request.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        {% if request.status == 'SCHEDULED' %}
+                            Reschedule Visit for Request #{{ request.ticket_number }}
+                        {% else %}
+                            Schedule Visit for Request #{{ request.ticket_number }}
+                        {% endif %}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="{{ url_for('service_requests.update_request', request_id=request.id) }}">
+                    <div class="modal-body">
+                        <input type="hidden" name="action" value="schedule">
+                        <div class="mb-3">
+                            <label for="scheduled_date{{ request.id }}" class="form-label">Visit Date</label>
+                            <input type="date" class="form-control" id="scheduled_date{{ request.id }}" 
+                                   name="scheduled_date" required min="{{ now.strftime('%Y-%m-%d') }}"
+                                   value="{% if request.scheduled_date %}{{ request.scheduled_date.strftime('%Y-%m-%d') }}{% endif %}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="scheduled_time{{ request.id }}" class="form-label">Visit Time</label>
+                            <input type="time" class="form-control" id="scheduled_time{{ request.id }}" 
+                                   name="scheduled_time" required
+                                   value="{% if request.scheduled_time %}{{ request.scheduled_time.strftime('%H:%M') }}{% endif %}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="comment{{ request.id }}" class="form-label">Additional Notes</label>
+                            <textarea class="form-control" id="comment{{ request.id }}" name="comment" 
+                                      rows="3" placeholder="Add any additional notes about the visit"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-{{ 'warning' if request.status == 'SCHEDULED' else 'primary' }}">
+                            {% if request.status == 'SCHEDULED' %}Reschedule Visit{% else %}Schedule Visit{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
+
+<style>
+.rating {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+}
+
+.rating input {
+    display: none;
+}
+
+.rating label {
+    cursor: pointer;
+    font-size: 30px;
+    color: #ddd;
+    margin: 0 2px;
+}
+
+.rating input:checked ~ label,
+.rating label:hover,
+.rating label:hover ~ label {
+    color: #ffd700;
+}
+</style>
 {% endblock %}

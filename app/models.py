@@ -125,13 +125,28 @@ class ServiceRequest(db.Model):
         """Get allowed actions based on current status and user role"""
         actions = []
         
+        # First check if user is college admin and request is in NEW state
+        if user.role == 'college_admin' and self.status == 'NEW' and self.created_by == user.id:
+            actions.extend([('edit', 'Edit Request', 'info')])
+
+        # Then check technician actions
         if user.role == 'technician':
-            is_senior = any(assignment.is_senior for assignment in user.college_assignments if assignment.college == self.institution)
+            # Get active contract for this institution
+            active_contract = AMCContract.query.filter_by(
+                institution=self.institution,
+                status='ACTIVE'
+            ).first()
+            
+            # Check if user is a senior technician for this contract
+            is_senior = False
+            if active_contract:
+                is_senior = any(assignment.is_senior for assignment in user.contract_assignments 
+                               if assignment.contract_id == active_contract.id)
             
             if self.status == 'NEW' and not is_senior:
                 actions.extend([('schedule', 'Schedule Visit', 'primary')])
-            elif self.status == 'SCHEDULED':
-                actions.extend([('mark_visited', 'Mark as Visited', 'success')])
+            elif self.status == 'SCHEDULED' and self.assigned_to == user.id:
+                actions.extend([('reschedule', 'Reschedule Visit', 'warning')])
             elif self.status == 'VISITED':
                 actions.extend([
                     ('resolve', 'Mark as Resolved', 'success'),
@@ -142,9 +157,12 @@ class ServiceRequest(db.Model):
             elif self.status == 'REOPENED' and is_senior:
                 actions.extend([('schedule', 'Schedule New Visit', 'primary')])
         
+        # Then check remaining college admin actions
         elif user.role == 'college_admin':
             if self.status == 'SCHEDULED':
-                actions.extend([('confirm_visit', 'Confirm Visit', 'success')])
+                actions.extend([('mark_visited', 'Mark as Visited', 'success')])
+            elif self.status == 'VISITED':
+                actions.extend([('resolve', 'Mark as Resolved', 'success')])
             elif self.status == 'RESOLVED':
                 if datetime.utcnow() < self.reopen_deadline:
                     actions.extend([('reopen', 'Reopen Request', 'warning')])

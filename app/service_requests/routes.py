@@ -27,7 +27,8 @@ def list_requests():
     
     return render_template('service_requests/list_requests.html', 
                          title='Service Requests',
-                         requests=requests)
+                         requests=requests,
+                         now=datetime.now())
 
 @bp.route('/request/new', methods=['GET', 'POST'])
 @login_required
@@ -51,10 +52,20 @@ def create_request():
         )
         
         # Auto-assign to Jr. Technician
-        jr_tech = User.query.join(TechnicianAssignment).filter(
-            TechnicianAssignment.college == current_user.institution,
-            TechnicianAssignment.is_senior == False
+        # First get the active contract for the institution
+        from app.models import AMCContract
+        active_contract = AMCContract.query.filter_by(
+            institution=current_user.institution,
+            status='ACTIVE'
         ).first()
+        
+        jr_tech = None
+        if active_contract:
+            # Find a junior technician assigned to this contract
+            jr_tech = User.query.join(TechnicianAssignment).filter(
+                TechnicianAssignment.contract_id == active_contract.id,
+                TechnicianAssignment.is_senior == False
+            ).first()
         
         if jr_tech:
             service_request.assigned_to = jr_tech.id
@@ -113,16 +124,55 @@ def update_request(request_id):
         new_status = None
         
         # Handle different actions based on the new workflow
-        if action == 'schedule' and current_user.role == 'technician':
-            new_status = 'SCHEDULED'
-            scheduled_date = datetime.strptime(request.form['scheduled_date'], '%Y-%m-%d').date()
-            scheduled_time = datetime.strptime(request.form['scheduled_time'], '%H:%M').time()
-            service_request.scheduled_date = scheduled_date
-            service_request.scheduled_time = scheduled_time
-            service_request.scheduled_at = datetime.utcnow()
-            comment = f"Visit scheduled for {service_request.format_schedule_time()}"
+        if action == 'edit' and current_user.role == 'college_admin':
+            if service_request.status != 'NEW' or service_request.created_by != current_user.id:
+                flash('Can only edit requests in NEW state that you created.', 'danger')
+                return redirect(url_for('service_requests.view_request', request_id=request_id))
+                
+            service_request.title = request.form.get('title', service_request.title)
+            service_request.description = request.form.get('description', service_request.description)
+            service_request.equipment_type = request.form.get('equipment_type', service_request.equipment_type)
+            service_request.priority = request.form.get('priority', service_request.priority)
+            comment = 'Request details updated'
             
-        elif action == 'confirm_visit' and current_user.role == 'college_admin':
+        elif action in ['schedule', 'reschedule'] and current_user.role == 'technician':
+            # Validate required fields
+            scheduled_date = request.form.get('scheduled_date')
+            scheduled_time = request.form.get('scheduled_time')
+            
+            # For reschedule, verify assigned technician
+            if action == 'reschedule' and service_request.assigned_to != current_user.id:
+                flash('Only the assigned technician can reschedule visits.', 'danger')
+                return redirect(url_for('service_requests.view_request', request_id=request_id))
+            
+            if not scheduled_date or not scheduled_time:
+                flash('Please provide both date and time for the visit.', 'danger')
+                return redirect(url_for('service_requests.update_request', request_id=request_id))
+            
+            try:
+                # Parse and validate date/time
+                scheduled_date = datetime.strptime(scheduled_date, '%Y-%m-%d').date()
+                scheduled_time = datetime.strptime(scheduled_time, '%H:%M').time()
+                
+                # Check if date is not in past
+                if scheduled_date < datetime.now().date():
+                    flash('Cannot schedule visit for a past date.', 'danger')
+                    return redirect(url_for('service_requests.update_request', request_id=request_id))
+                
+                new_status = 'SCHEDULED'
+                service_request.scheduled_date = scheduled_date
+                service_request.scheduled_time = scheduled_time
+                service_request.scheduled_at = datetime.utcnow()
+                
+                comment = f"Visit scheduled for {service_request.format_schedule_time()}"
+                if request.form.get('comment'):
+                    comment += f"\nNotes: {request.form.get('comment')}"
+                    
+            except ValueError:
+                flash('Invalid date or time format provided.', 'danger')
+                return redirect(url_for('service_requests.update_request', request_id=request_id))
+            
+        elif action == 'mark_visited' and current_user.role == 'college_admin':
             new_status = 'VISITED'
             service_request.visited_at = datetime.utcnow()
             service_request.actual_visit_time = datetime.utcnow()
@@ -130,10 +180,19 @@ def update_request(request_id):
             
             # Auto-escalate to Sr. Technician if multiple visits
             if service_request.visit_count > 1:
-                sr_tech = User.query.join(TechnicianAssignment).filter(
-                    TechnicianAssignment.college == service_request.institution,
-                    TechnicianAssignment.is_senior == True
+                # Get active contract for this institution
+                from app.models import AMCContract
+                active_contract = AMCContract.query.filter_by(
+                    institution=service_request.institution,
+                    status='ACTIVE'
                 ).first()
+                
+                sr_tech = None
+                if active_contract:
+                    sr_tech = User.query.join(TechnicianAssignment).filter(
+                        TechnicianAssignment.contract_id == active_contract.id,
+                        TechnicianAssignment.is_senior == True
+                    ).first()
                 
                 if sr_tech:
                     service_request.assigned_to = sr_tech.id
@@ -146,7 +205,7 @@ def update_request(request_id):
             service_request.expected_resolution_date = datetime.strptime(request.form['expected_resolution_date'], '%Y-%m-%d').date()
             comment = f"Put on hold - Reason: {service_request.on_hold_reason}"
             
-        elif action == 'resolve' and current_user.role == 'technician':
+        elif action == 'resolve' and current_user.role in ['technician', 'college_admin']:
             new_status = 'RESOLVED'
             service_request.resolved_at = datetime.utcnow()
             service_request.resolution_notes = request.form.get('resolution_notes')
@@ -177,16 +236,28 @@ def update_request(request_id):
             new_status = 'CLOSED'
             service_request.closed_at = datetime.utcnow()
             
+            # Get rating and feedback
+            try:
+                rating = int(request.form.get('rating', 5))  # Default to 5 stars if not provided
+                if not 1 <= rating <= 5:
+                    rating = 5  # Ensure rating is between 1-5
+            except (ValueError, TypeError):
+                rating = 5  # Default to 5 stars if invalid value
+                
+            feedback_text = request.form.get('feedback', '').strip()
+            if not feedback_text:
+                feedback_text = 'No feedback provided'
+            
             # Create feedback
             feedback = RequestFeedback(
                 service_request_id=service_request.id,
-                rating=int(request.form['rating']),
-                comments=request.form.get('feedback_comments'),
+                rating=rating,
+                comments=feedback_text,
                 created_by=current_user.id,
                 is_auto_rated=False
             )
             db.session.add(feedback)
-            comment = 'Request closed with feedback'
+            comment = f'Request closed with {rating}-star rating'
             
             flash('Request closed successfully. Note: This action cannot be undone.', 'info')
             
@@ -227,7 +298,8 @@ def update_request(request_id):
     
     return render_template('service_requests/update_request.html',
                          title=f'Update Request #{service_request.ticket_number}',
-                         request=service_request)
+                         request=service_request,
+                         now=datetime.now())
 
 # Background task to auto-close resolved requests and assign 5-star ratings
 @bp.route('/auto_close_resolved', methods=['POST'])

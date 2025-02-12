@@ -12,19 +12,44 @@
                         <input type="hidden" name="action" id="action" value="">
                         
                         {% for action_id, action_label, action_color in request.get_allowed_actions(current_user) %}
-                            {% if action_id in ['hold', 'close', 'reopen'] %}
-                                <button type="button" class="btn btn-{{ action_color }} mb-3" 
-                                        data-bs-toggle="modal" data-bs-target="#{{ action_id }}Modal">
-                                    {{ action_label }}
-                                </button>
-                            {% else %}
-                                <button type="submit" class="btn btn-{{ action_color }} mb-3" 
+                            {% if action_id == 'edit' %}
+                                {# College Admin - Edit Request Form #}
+                                <div class="mb-3">
+                                    <h5>Edit Request Details</h5>
+                                    <div class="mb-3">
+                                        <label for="title" class="form-label">Title</label>
+                                        <input type="text" class="form-control" id="title" name="title" 
+                                               value="{{ request.title }}" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="description" class="form-label">Description</label>
+                                        <textarea class="form-control" id="description" name="description" 
+                                                  rows="3" required>{{ request.description }}</textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="equipment_type" class="form-label">Equipment Type</label>
+                                        <select class="form-select" id="equipment_type" name="equipment_type" required>
+                                            <option value="Computer" {% if request.equipment_type == 'Computer' %}selected{% endif %}>Computer</option>
+                                            <option value="Printer" {% if request.equipment_type == 'Printer' %}selected{% endif %}>Printer</option>
+                                            <option value="Network" {% if request.equipment_type == 'Network' %}selected{% endif %}>Network</option>
+                                            <option value="Other" {% if request.equipment_type == 'Other' %}selected{% endif %}>Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="priority" class="form-label">Priority</label>
+                                        <select class="form-select" id="priority" name="priority" required>
+                                            <option value="Low" {% if request.priority == 'Low' %}selected{% endif %}>Low</option>
+                                            <option value="Medium" {% if request.priority == 'Medium' %}selected{% endif %}>Medium</option>
+                                            <option value="High" {% if request.priority == 'High' %}selected{% endif %}>High</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-{{ action_color }}" 
                                         onclick="document.getElementById('action').value='{{ action_id }}'">
                                     {{ action_label }}
                                 </button>
-                            {% endif %}
-
-                            {% if action_id == 'schedule' %}
+                            {% elif action_id in ['schedule', 'reschedule'] %}
+                                {# Junior Technician - Schedule Visit Form #}
                                 <div class="mb-3">
                                     <h5>Schedule Visit</h5>
                                     <div class="row">
@@ -40,6 +65,42 @@
                                         </div>
                                     </div>
                                 </div>
+                                <div class="mb-3">
+                                    <label for="comment" class="form-label">Add Comment</label>
+                                    <textarea class="form-control" id="comment" name="comment" rows="3" 
+                                              placeholder="Add details about the scheduled visit"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-{{ action_color }}" 
+                                        onclick="document.getElementById('action').value='{{ action_id }}'">
+                                    {{ action_label }}
+                                </button>
+                            {% elif action_id == 'mark_visited' %}
+                                {# College Admin - Mark Visit Form #}
+                                <div class="mb-3">
+                                    <h5>Confirm Technician Visit</h5>
+                                    <p class="text-muted">Scheduled for: {{ request.format_schedule_time() }}</p>
+                                    <div class="mb-3">
+                                        <label for="comment" class="form-label">Visit Notes</label>
+                                        <textarea class="form-control" id="comment" name="comment" rows="3" required
+                                                  placeholder="Please provide details about the technician's visit and work done"></textarea>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-{{ action_color }}" 
+                                        onclick="document.getElementById('action').value='{{ action_id }}'">
+                                    {{ action_label }}
+                                </button>
+                            {% else %}
+                                {% if action_id in ['hold', 'close', 'reopen'] %}
+                                    <button type="button" class="btn btn-{{ action_color }} mb-3" 
+                                            data-bs-toggle="modal" data-bs-target="#{{ action_id }}Modal">
+                                        {{ action_label }}
+                                    </button>
+                                {% else %}
+                                    <button type="submit" class="btn btn-{{ action_color }} mb-3" 
+                                            onclick="document.getElementById('action').value='{{ action_id }}'">
+                                        {{ action_label }}
+                                    </button>
+                                {% endif %}
                             {% endif %}
 
                             {% if action_id == 'resolve' %}
@@ -51,13 +112,7 @@
                             {% endif %}
                         {% endfor %}
 
-                        {% if request.status != 'CLOSED' %}
-                            <div class="mb-3 mt-4">
-                                <label for="comment" class="form-label">Add Comment</label>
-                                <textarea class="form-control" id="comment" name="comment" rows="3"
-                                          placeholder="Add a comment about this update"></textarea>
-                            </div>
-                        {% endif %}
+
                     </form>
                 </div>
             </div>
