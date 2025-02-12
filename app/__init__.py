@@ -31,6 +31,10 @@ def create_app():
     from app.main import bp as main_bp
     app.register_blueprint(main_bp, url_prefix='')
 
+    # Initialize scheduler
+    from app.tasks import init_scheduler
+    init_scheduler(app)
+    
     return app
 
 from app import models

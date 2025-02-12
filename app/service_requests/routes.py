@@ -235,7 +235,14 @@ def update_request(request_id):
                     flash('Cannot schedule visit for a past date.', 'danger')
                     return redirect(url_for('service_requests.update_request', request_id=request_id))
                 
-                new_status = 'SCHEDULED'
+                # Set new status based on current status
+                if service_request.status == 'REOPENED':
+                    new_status = 'VISITED'
+                elif service_request.status == 'ON_HOLD':
+                    new_status = 'SCHEDULED'  # Move from ON_HOLD back to SCHEDULED
+                else:
+                    new_status = 'SCHEDULED'
+                
                 service_request.scheduled_date = scheduled_date
                 service_request.scheduled_time = scheduled_time
                 service_request.scheduled_at = datetime.utcnow()
@@ -297,10 +304,12 @@ def update_request(request_id):
             service_request.reopened_at = datetime.utcnow()
             
             # Auto-assign to Sr. Technician
-            sr_tech = User.query.join(TechnicianAssignment).filter(
-                TechnicianAssignment.college == service_request.institution,
-                TechnicianAssignment.is_senior == True
-            ).first()
+            sr_tech = User.query.join(TechnicianAssignment)\
+                .join(AMCContract)\
+                .filter(
+                    AMCContract.institution == service_request.institution,
+                    TechnicianAssignment.is_senior == True
+                ).first()
             
             if sr_tech:
                 service_request.assigned_to = sr_tech.id

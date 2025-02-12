@@ -2,47 +2,71 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h1>Create Service Request</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Create Service Request</h1>
+        <a href="{{ url_for('service_requests.list_requests') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Requests
+        </a>
+    </div>
     
-    <div class="card mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">New Service Request</h5>
+        </div>
         <div class="card-body">
             <form method="POST" id="serviceRequestForm">
-                <!-- Basic Info -->
-                <div class="mb-3">
-                    <label for="title" class="form-label">Title</label>
-                    <input type="text" class="form-control" id="title" name="title" required
-                           placeholder="Brief description of the issue">
+                <!-- Progress Indicator -->
+                <div class="progress mb-4" style="height: 2px;">
+                    <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
+
+                <!-- Basic Info -->
+                <div class="mb-4">
+                    <h5 class="text-primary mb-3">Basic Information</h5>
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Title <i class="fas fa-info-circle text-muted" data-bs-toggle="tooltip" title="A clear, concise summary of the issue"></i></label>
+                        <input type="text" class="form-control" id="title" name="title" required
+                               placeholder="e.g., 'Printer not responding' or 'No internet in Lab 201'">
+                    </div>
                 
-                <div class="mb-3">
-                    <label for="description" class="form-label">Description</label>
-                    <textarea class="form-control" id="description" name="description" rows="4" required
-                              placeholder="Detailed description of the issue"></textarea>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description <i class="fas fa-info-circle text-muted" data-bs-toggle="tooltip" title="Include any relevant details that could help diagnose the issue"></i></label>
+                        <textarea class="form-control" id="description" name="description" rows="4" required
+                                  placeholder="Please include:
+- What is not working
+- When did it start
+- What have you tried so far
+- Any error messages you see"></textarea>
+                    </div>
                 </div>
                 
                 <!-- Problem Category Selection -->
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label for="problem_category" class="form-label">Problem Category</label>
-                        <select class="form-select" id="problem_category" name="problem_category" required>
-                            <option value="">Select category</option>
-                            <option value="single_equipment">Single Equipment Issue</option>
-                            <option value="network">Network Connectivity</option>
-                            <option value="wifi">WiFi Coverage</option>
-                            <option value="cctv">CCTV System</option>
-                            <option value="infrastructure">Infrastructure</option>
-                        </select>
-                    </div>
+                <div class="mb-4">
+                    <h5 class="text-primary mb-3">Issue Classification</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="problem_category" class="form-label">Problem Category <i class="fas fa-info-circle text-muted" data-bs-toggle="tooltip" title="Select the most appropriate category for your issue"></i></label>
+                            <select class="form-select" id="problem_category" name="problem_category" required>
+                                <option value="">Select category</option>
+                                <option value="single_equipment" data-icon="fas fa-desktop">Single Equipment Issue</option>
+                                <option value="network" data-icon="fas fa-network-wired">Network Connectivity</option>
+                                <option value="wifi" data-icon="fas fa-wifi">WiFi Coverage</option>
+                                <option value="cctv" data-icon="fas fa-video">CCTV System</option>
+                                <option value="infrastructure" data-icon="fas fa-building">Infrastructure</option>
+                            </select>
+                        </div>
                     
-                    <div class="col-md-6">
-                        <label for="priority" class="form-label">Priority</label>
-                        <select class="form-select" id="priority" name="priority" required>
-                            <option value="">Select priority</option>
-                            <option value="low">Low</option>
-                            <option value="medium">Medium</option>
-                            <option value="high">High</option>
-                            <option value="urgent">Urgent</option>
-                        </select>
+                        <div class="col-md-6">
+                            <label for="priority" class="form-label">Priority <i class="fas fa-info-circle text-muted" data-bs-toggle="tooltip" title="Select based on impact and urgency"></i></label>
+                            <select class="form-select" id="priority" name="priority" required>
+                                <option value="">Select priority</option>
+                                <option value="low" data-badge="success">Low - No immediate impact</option>
+                                <option value="medium" data-badge="warning">Medium - Limited impact</option>
+                                <option value="high" data-badge="danger">High - Significant impact</option>
+                                <option value="urgent" data-badge="dark">Urgent - Critical impact</option>
+                            </select>
+                            <small class="form-text text-muted mt-1" id="priority-help"></small>
+                        </div>
                     </div>
                 </div>
                 
@@ -139,9 +163,18 @@
                               placeholder="Any additional details about the location"></textarea>
                 </div>
                 
-                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                    <a href="{{ url_for('service_requests.list_requests') }}" class="btn btn-secondary me-md-2">Cancel</a>
-                    <button type="submit" class="btn btn-primary">Create Request</button>
+                <hr class="my-4">
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">* Required fields</small>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary" onclick="window.location.href='{{ url_for('service_requests.list_requests') }}'">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="fas fa-paper-plane"></i> Submit Request
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -152,10 +185,29 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+
+    // Form elements
+    const form = document.getElementById('serviceRequestForm');
     const problemCategory = document.getElementById('problem_category');
     const singleEquipmentFields = document.getElementById('single_equipment_fields');
     const networkFields = document.getElementById('network_fields');
     const issueTypeSelect = document.getElementById('issue_type');
+    const prioritySelect = document.getElementById('priority');
+    const priorityHelp = document.getElementById('priority-help');
+    const progressBar = document.querySelector('.progress-bar');
+    
+    // Priority descriptions
+    const priorityDescriptions = {
+        'low': 'Minor issues that don\'t affect daily operations',
+        'medium': 'Issues affecting some users or services',
+        'high': 'Major issues affecting multiple users or critical services',
+        'urgent': 'Critical issues requiring immediate attention'
+    };
     
     // Hide all issue type groups initially
     function hideAllIssueTypes() {
@@ -173,6 +225,23 @@ document.addEventListener('DOMContentLoaded', function() {
             group.style.display = '';
         }
     }
+    
+    // Update progress bar based on filled required fields
+    function updateProgressBar() {
+        const requiredFields = form.querySelectorAll('[required]');
+        let filledCount = 0;
+        
+        requiredFields.forEach(field => {
+            if (field.value) filledCount++;
+        });
+        
+        const progress = (filledCount / requiredFields.length) * 100;
+        progressBar.style.width = progress + '%';
+        progressBar.setAttribute('aria-valuenow', progress);
+    }
+    
+    // Event Listeners
+    form.addEventListener('input', updateProgressBar);
     
     problemCategory.addEventListener('change', function() {
         // Hide all conditional fields first
@@ -201,6 +270,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 networkFields.classList.remove('d-none');
                 showIssueTypeGroup('infrastructure-issues');
                 break;
+        }
+        
+        // Add icons to options
+        const selectedOption = this.options[this.selectedIndex];
+        const icon = selectedOption.getAttribute('data-icon');
+        if (icon) {
+            const label = document.querySelector(`label[for='${this.id}']`);
+            label.innerHTML = `<i class="${icon} me-2"></i>${label.textContent}`;
+        }
+    });
+    
+    prioritySelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const badge = selectedOption.getAttribute('data-badge');
+        const description = priorityDescriptions[this.value];
+        
+        if (badge && description) {
+            priorityHelp.innerHTML = `<span class="badge bg-${badge} me-2">${selectedOption.text}</span>${description}`;
+        } else {
+            priorityHelp.innerHTML = '';
         }
     });
     

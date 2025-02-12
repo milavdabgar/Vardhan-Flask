@@ -118,7 +118,7 @@ class ServiceRequest(db.Model):
             'NEW': ['SCHEDULED'],
             'SCHEDULED': ['VISITED', 'ON_HOLD'],
             'VISITED': ['RESOLVED', 'ON_HOLD'],
-            'ON_HOLD': ['SCHEDULED', 'VISITED'],
+            'ON_HOLD': ['SCHEDULED'],  # From ON_HOLD, can only go to SCHEDULED via scheduling a visit
             'RESOLVED': ['REOPENED', 'CLOSED'],
             'REOPENED': ['VISITED'],
             'CLOSED': []  # No transitions from CLOSED state
@@ -169,14 +169,12 @@ class ServiceRequest(db.Model):
             elif self.status == 'SCHEDULED' and self.assigned_to == user.id:
                 actions.extend([('reschedule', 'Reschedule Visit', 'warning')])
             elif self.status == 'VISITED':
-                actions.extend([
-                    ('resolve', 'Mark as Resolved', 'success'),
-                    ('hold', 'Put on Hold', 'warning')
-                ])
-            elif self.status == 'ON_HOLD':
-                actions.extend([('resume', 'Resume Work', 'primary')])
+                if self.assigned_to == user.id:  # Only assigned technician can put on hold
+                    actions.extend([('hold', 'Put on Hold', 'warning')])
+            elif self.status == 'ON_HOLD' and self.assigned_to == user.id:
+                actions.extend([('schedule', 'Schedule Visit', 'primary')])
             elif self.status == 'REOPENED' and is_senior:
-                actions.extend([('schedule', 'Schedule New Visit', 'primary')])
+                actions.extend([('schedule', 'Schedule Visit', 'primary')])
         
         # Then check remaining college admin actions
         elif user.role == 'college_admin':

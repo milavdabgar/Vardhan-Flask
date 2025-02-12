@@ -1,5 +1,6 @@
 Flask
 Flask-SQLAlchemy
+Flask-APScheduler
 Flask-Login
 Flask-WTF
 Flask-Migrate
@@ -7,3 +8,4 @@ email-validator
 python-dotenv
 Werkzeug
 WTForms
+Flask-APScheduler
