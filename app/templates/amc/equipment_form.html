@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">{{ 'Edit' if equipment else 'New' }} Equipment</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Equipment Name</label>
+                            <input type="text" class="form-control" id="name" name="name" 
+                                   value="{{ equipment.name if equipment else '' }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="type" class="form-label">Equipment Type</label>
+                            <select class="form-select" id="type" name="type" required>
+                                <option value="">Select Type</option>
+                                <option value="Computer" {{ 'selected' if equipment and equipment.type == 'Computer' else '' }}>Computer</option>
+                                <option value="Printer" {{ 'selected' if equipment and equipment.type == 'Printer' else '' }}>Printer</option>
+                                <option value="CCTV" {{ 'selected' if equipment and equipment.type == 'CCTV' else '' }}>CCTV</option>
+                                <option value="Network Device" {{ 'selected' if equipment and equipment.type == 'Network Device' else '' }}>Network Device</option>
+                            </select>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="make" class="form-label">Make</label>
+                                <input type="text" class="form-control" id="make" name="make" 
+                                       value="{{ equipment.make if equipment else '' }}">
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="model" class="form-label">Model</label>
+                                <input type="text" class="form-control" id="model" name="model" 
+                                       value="{{ equipment.model if equipment else '' }}">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="serial_number" class="form-label">Serial Number</label>
+                            <input type="text" class="form-control" id="serial_number" name="serial_number" 
+                                   value="{{ equipment.serial_number if equipment else '' }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="installation_date" class="form-label">Installation Date</label>
+                            <input type="date" class="form-control" id="installation_date" name="installation_date" 
+                                   value="{{ equipment.installation_date.strftime('%Y-%m-%d') if equipment and equipment.installation_date else '' }}">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="location" class="form-label">Location</label>
+                            <input type="text" class="form-control" id="location" name="location" 
+                                   value="{{ equipment.location if equipment else '' }}" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="specifications" class="form-label">Specifications</label>
+                            <textarea class="form-control" id="specifications" name="specifications" rows="3">{{ equipment.specifications if equipment else '' }}</textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="contract_id" class="form-label">AMC Contract</label>
+                            <select class="form-select" id="contract_id" name="contract_id" required>
+                                <option value="">Select Contract</option>
+                                {% for contract in contracts %}
+                                <option value="{{ contract.id }}" 
+                                        {{ 'selected' if equipment and equipment.contract_id == contract.id else '' }}>
+                                    {{ contract.contract_number }} - {{ contract.institution }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        {% if equipment %}
+                        <div class="mb-3">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status" name="status" required>
+                                <option value="ACTIVE" {{ 'selected' if equipment.status == 'ACTIVE' else '' }}>Active</option>
+                                <option value="INACTIVE" {{ 'selected' if equipment.status == 'INACTIVE' else '' }}>Inactive</option>
+                                <option value="UNDER_REPAIR" {{ 'selected' if equipment.status == 'UNDER_REPAIR' else '' }}>Under Repair</option>
+                            </select>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                {{ 'Update' if equipment else 'Add' }} Equipment
+                            </button>
+                            <a href="{{ url_for('amc.list_equipment') }}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

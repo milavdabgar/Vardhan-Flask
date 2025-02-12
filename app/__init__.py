@@ -22,11 +22,14 @@ def create_app():
     from app.auth import bp as auth_bp
     app.register_blueprint(auth_bp, url_prefix='/auth')
 
+    from app.amc import bp as amc_bp
+    app.register_blueprint(amc_bp, url_prefix='/amc')
+
+    from app.service_requests import bp as service_requests_bp
+    app.register_blueprint(service_requests_bp)
+
     from app.main import bp as main_bp
     app.register_blueprint(main_bp, url_prefix='')
-
-    from app.service_requests import bp as service_bp
-    app.register_blueprint(service_bp, url_prefix='/service')
 
     return app
 

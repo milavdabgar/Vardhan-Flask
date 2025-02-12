@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Contract Details</h4>
+                    {% if current_user.is_admin() %}
+                    <a href="{{ url_for('amc.edit_contract', id=contract.id) }}" class="btn btn-primary">
+                        <i class="fas fa-edit"></i> Edit Contract
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Contract Number:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            {{ contract.contract_number }}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Institution:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            {{ contract.institution }}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Contract Type:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            {{ contract.contract_type }}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Duration:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            {{ contract.start_date.strftime('%Y-%m-%d') }} to {{ contract.end_date.strftime('%Y-%m-%d') }}
+                            {% if contract.is_active() %}
+                                <span class="badge bg-success ms-2">Active</span>
+                                {% if contract.days_until_expiry() <= 30 %}
+                                    <span class="badge bg-warning ms-2">Expires in {{ contract.days_until_expiry() }} days</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-danger ms-2">{{ contract.status }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Contract Value:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            ₹{{ "%.2f"|format(contract.contract_value) }}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Payment Terms:</strong>
+                        </div>
+                        <div class="col-md-8">
+                            {{ contract.payment_terms or 'Not specified' }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Equipment Count</h5>
+                    <h2 class="card-text">{{ contract.equipments|length }}</h2>
+                    {% if current_user.is_admin() %}
+                    <a href="{{ url_for('amc.new_equipment', contract_id=contract.id) }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add Equipment
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Contract Status</h5>
+                    <div class="mb-2">
+                        <strong>Created:</strong> {{ contract.created_at.strftime('%Y-%m-%d') }}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Last Updated:</strong> {{ contract.updated_at.strftime('%Y-%m-%d') }}
+                    </div>
+                    <div>
+                        <strong>Created By:</strong> {{ contract.creator.full_name }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Equipment List</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Make/Model</th>
+                                    <th>Serial Number</th>
+                                    <th>Location</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for equipment in contract.equipments %}
+                                <tr>
+                                    <td>{{ equipment.name }}</td>
+                                    <td>{{ equipment.type }}</td>
+                                    <td>{{ equipment.make }} {{ equipment.model }}</td>
+                                    <td>{{ equipment.serial_number }}</td>
+                                    <td>{{ equipment.location }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if equipment.status == 'ACTIVE' else 'warning' }}">
+                                            {{ equipment.status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('amc.view_equipment', id=equipment.id) }}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if current_user.is_admin() %}
+                                        <a href="{{ url_for('amc.edit_equipment', id=equipment.id) }}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

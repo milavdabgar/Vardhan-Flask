@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>AMC Contracts</h1>
+        {% if current_user.is_admin() %}
+        <a href="{{ url_for('amc.new_contract') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> New Contract
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Active Contracts</h5>
+                    <h2 class="card-text">{{ contracts|selectattr('is_active')|list|length if contracts else 0 }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Expiring Soon</h5>
+                    <h2 class="card-text">{{ contracts|expiring_soon|length if contracts else 0 }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Total Value</h5>
+                    <h2 class="card-text">₹{{ "%.2f"|format(contracts|sum(attribute='contract_value')) if contracts else "0.00" }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Total Equipment</h5>
+                    <h2 class="card-text">
+                        {% if contracts %}
+                            {% set total = 0 %}
+                            {% for contract in contracts %}
+                                {% set total = total + contract.equipments|length %}
+                            {% endfor %}
+                            {{ total }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Contract #</th>
+                            <th>Institution</th>
+                            <th>Type</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Value (₹)</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for contract in contracts %}
+                        <tr>
+                            <td>{{ contract.contract_number }}</td>
+                            <td>{{ contract.institution }}</td>
+                            <td>{{ contract.contract_type }}</td>
+                            <td>{{ contract.start_date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ contract.end_date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ "%.2f"|format(contract.contract_value) }}</td>
+                            <td>
+                                {% if contract.is_active() %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-danger">{{ contract.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('amc.view_contract', id=contract.id) }}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if current_user.is_admin() %}
+                                <a href="{{ url_for('amc.edit_contract', id=contract.id) }}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
