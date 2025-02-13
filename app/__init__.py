@@ -9,12 +9,16 @@ db = SQLAlchemy()
 login_manager = LoginManager()
 migrate = Migrate()
 
-def create_app():
+def create_app(test_config=None):
     app = Flask(__name__)
     
-    # Get config based on environment
-    config_name = os.environ.get('FLASK_ENV', 'development')
-    app.config.from_object(config[config_name])
+    if test_config is None:
+        # Get config based on environment
+        config_name = os.environ.get('FLASK_ENV', 'development')
+        app.config.from_object(config[config_name])
+    else:
+        # Load the test config if passed in
+        app.config.update(test_config)
 
     db.init_app(app)
     login_manager.init_app(app)
@@ -35,9 +39,10 @@ def create_app():
     from app.main import bp as main_bp
     app.register_blueprint(main_bp, url_prefix='')
 
-    # Initialize scheduler
-    from app.tasks import init_scheduler
-    init_scheduler(app)
+    # Initialize scheduler only in non-testing mode
+    if not app.config.get('TESTING'):
+        from app.tasks import init_scheduler
+        init_scheduler(app)
     
     return app
 
