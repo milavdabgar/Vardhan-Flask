@@ -1,6 +1,6 @@
 services:
   vardhan_app:
-    image: milavdabgar/vardhan-flask:latest
+    build: .
     container_name: vardhan_app
     restart: unless-stopped
     environment:
