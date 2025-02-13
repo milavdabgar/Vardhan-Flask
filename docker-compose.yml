@@ -1,10 +1,9 @@
 services:
   vardhan_app:
-    build: .
+    image: milavdabgar/vardhan-flask:latest
     container_name: vardhan_app
     restart: unless-stopped
     environment:
-      FLASK_APP: wsgi.py
       FLASK_ENV: production
       SECRET_KEY: your-secret-key-here
     volumes:

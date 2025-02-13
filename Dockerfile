@@ -1,30 +1,32 @@
 FROM python:3.12-slim
 
-WORKDIR /app
-
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
     sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
+# Set working directory
+WORKDIR /app
+
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
+
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application
 COPY . .
 
-# Set environment variables
-ENV FLASK_APP=wsgi.py
-ENV FLASK_ENV=production
-ENV PYTHONPATH=/app
+# Make the entrypoint script executable
+RUN chmod +x docker-entrypoint.sh
 
-# Create the instance folder for SQLite database
+# Create instance directory and set permissions
 RUN mkdir -p instance && chmod 777 instance
 
-# Expose port
-EXPOSE 5000
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV FLASK_APP=wsgi.py
 
-# Run gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "wsgi:application"]
+# Use our entrypoint script
+ENTRYPOINT ["./docker-entrypoint.sh"]

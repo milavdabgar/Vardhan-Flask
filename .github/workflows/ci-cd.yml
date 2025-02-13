@@ -53,12 +53,5 @@ jobs:
         script: |
           cd /home/milav/docker-projects/vardhan-flask
           docker compose pull
-          docker compose down
+          docker compose down -v
           docker compose up -d
-          # Wait for app to start
-          sleep 10
-          # Initialize database if needed
-          docker compose exec -T vardhan_app flask db upgrade || docker compose exec -T vardhan_app flask db init
-          docker compose exec -T vardhan_app flask db migrate -m "initial migration"
-          docker compose exec -T vardhan_app flask db upgrade
-          docker compose exec -T vardhan_app python init_database.py
