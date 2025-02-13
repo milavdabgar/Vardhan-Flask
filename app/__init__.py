@@ -2,7 +2,8 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
-from config import Config
+from config import config
+import os
 
 db = SQLAlchemy()
 login_manager = LoginManager()
@@ -10,7 +11,10 @@ migrate = Migrate()
 
 def create_app():
     app = Flask(__name__)
-    app.config.from_object(Config)
+    
+    # Get config based on environment
+    config_name = os.environ.get('FLASK_ENV', 'development')
+    app.config.from_object(config[config_name])
 
     db.init_app(app)
     login_manager.init_app(app)
