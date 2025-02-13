@@ -49,6 +49,13 @@ jobs:
     - name: Deploy to server
       env:
         SSH_USER: milav
-        SERVER: planetmilav.com
+        DEPLOY_PATH: /home/milav/vardhan-flask
       run: |
-        ssh $SSH_USER@$SERVER "cd /home/milav/docker-projects/vardhan-flask && ./deploy.sh"
+        # Make deploy.sh executable
+        chmod +x deploy.sh
+        
+        # Copy deploy script to server
+        scp deploy.sh $SSH_USER@planetmilav.com:$DEPLOY_PATH/deploy.sh
+        
+        # Run deploy script
+        ssh $SSH_USER@planetmilav.com "cd $DEPLOY_PATH && chmod +x deploy.sh && ./deploy.sh"
