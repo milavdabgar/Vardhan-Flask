@@ -15,8 +15,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Set environment variables
-ENV FLASK_APP=vardhan.py
+ENV FLASK_APP=wsgi.py
 ENV FLASK_ENV=production
+ENV PYTHONPATH=/app
 
 # Create the instance folder for SQLite database
 RUN mkdir -p instance && chmod 777 instance
@@ -25,4 +26,4 @@ RUN mkdir -p instance && chmod 777 instance
 EXPOSE 5000
 
 # Run gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "vardhan:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "wsgi:application"]

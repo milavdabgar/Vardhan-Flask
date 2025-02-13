@@ -42,3 +42,5 @@ def create_app():
     return app
 
 from app import models
+
+__all__ = ['create_app', 'db', 'login_manager', 'migrate']

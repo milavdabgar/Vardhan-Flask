@@ -12,20 +12,26 @@ services:
       - vardhan_db_data:/var/lib/mysql
     networks:
       - vardhan_network
+    healthcheck:
+      test: ["CMD", "mariadb", "-u", "root", "-pseagate", "-e", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   vardhan_app:
     build: .
     container_name: vardhan_app
     restart: unless-stopped
     environment:
-      FLASK_APP: vardhan.py
+      FLASK_APP: wsgi.py
       FLASK_ENV: production
       DATABASE_URL: mysql+pymysql://vardhan_user:seagate@vardhan_db/vardhan
       SECRET_KEY: your-secret-key-here
     volumes:
       - vardhan_data:/app/instance
     depends_on:
-      - vardhan_db
+      vardhan_db:
+        condition: service_healthy
     networks:
       - vardhan_network
       - planetmilav_wordpress_network
