@@ -69,9 +69,12 @@ The application is automatically deployed to https://vardhan.planetmilav.com whe
 4. Start development server:
    ```bash
    # Option 1: Using Python directly
-   python wsgi.py
+   python main.py
 
-   # Option 2: Using Docker
+   # Option 2: Using Flask CLI
+   flask run
+
+   # Option 3: Using Docker
    docker-compose up
    ```
 

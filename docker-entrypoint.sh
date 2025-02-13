@@ -17,4 +17,9 @@ python init_database.py
 
 echo "Starting application..."
 # Start the application
-exec gunicorn --bind 0.0.0.0:5000 wsgi:app
+exec gunicorn main:app \
+    --bind 0.0.0.0:5000 \
+    --workers 4 \
+    --timeout 120 \
+    --access-logfile - \
+    --error-logfile -

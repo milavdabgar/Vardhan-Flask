@@ -27,7 +27,7 @@ RUN mkdir -p instance && chmod 777 instance
 
 # Set environment variables
 ENV PYTHONPATH=/app
-ENV FLASK_APP=wsgi.py
+ENV FLASK_APP=main.py
 
 # Use our entrypoint script
 ENTRYPOINT ["./docker-entrypoint.sh"]
