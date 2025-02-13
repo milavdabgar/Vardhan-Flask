@@ -2,6 +2,9 @@
 
 A Flask-based web application for managing AMC contracts and equipment across multiple colleges.
 
+## Version
+Current Version: 1.0.0
+
 ## Features
 
 - Multi-user authentication system
@@ -16,13 +19,21 @@ The application is automatically deployed to https://vardhan.planetmilav.com whe
 
 ### Deployment Process
 1. Push changes to the master branch
-2. GitHub Actions runs the test suite
+2. GitHub Actions runs the test suite and security checks
 3. If tests pass, the code is automatically deployed to the production server
 4. The deployment script:
    - Pulls the latest changes
    - Rebuilds Docker containers
    - Runs database migrations
    - Restarts the application
+
+### Release Process
+1. Create a new version tag: `git tag -a v1.x.x -m "Release message"`
+2. Push the tag: `git push origin v1.x.x`
+3. GitHub Actions will automatically:
+   - Run tests and security checks
+   - Deploy to production
+   - Create a GitHub release with notes
 
 ## Default Credentials
 
@@ -56,5 +67,10 @@ The application is automatically deployed to https://vardhan.planetmilav.com whe
 2. Install dependencies: `pip install -r requirements.txt`
 3. Run tests: `pytest`
 4. Start development server: `flask run`
+
+## Security
+- All dependencies are regularly scanned for vulnerabilities
+- Code is analyzed using Bandit for security issues
+- Automated security checks in CI/CD pipeline
 
 Last updated: 2025-02-13
