@@ -1,0 +1,41 @@
+services:
+  vardhan_db:
+    image: mariadb:latest
+    container_name: vardhan_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: vardhan
+      MYSQL_USER: vardhan_user
+      MYSQL_PASSWORD: seagate
+      MYSQL_ROOT_PASSWORD: seagate
+    volumes:
+      - vardhan_db_data:/var/lib/mysql
+    networks:
+      - vardhan_network
+
+  vardhan_app:
+    build: .
+    container_name: vardhan_app
+    restart: unless-stopped
+    environment:
+      FLASK_APP: vardhan.py
+      FLASK_ENV: production
+      DATABASE_URL: mysql+pymysql://vardhan_user:seagate@vardhan_db/vardhan
+      SECRET_KEY: your-secret-key-here
+    volumes:
+      - vardhan_data:/app/instance
+    depends_on:
+      - vardhan_db
+    networks:
+      - vardhan_network
+      - planetmilav_wordpress_network
+
+networks:
+  vardhan_network:
+    driver: bridge
+  planetmilav_wordpress_network:
+    external: true
+
+volumes:
+  vardhan_db_data:
+  vardhan_data:
