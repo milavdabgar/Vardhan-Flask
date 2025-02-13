@@ -10,4 +10,5 @@ Werkzeug
 WTForms
 Flask-APScheduler
 pymysql
+cryptography  # Required for PyMySQL
 gunicorn
