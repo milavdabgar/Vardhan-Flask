@@ -51,6 +51,6 @@ jobs:
         username: ${{ secrets.SERVER_USERNAME }}
         key: ${{ secrets.SERVER_SSH_KEY }}
         script: |
-          cd /path/to/vardhan-flask
+          cd /home/milav/docker-projects/vardhan-flask
           docker-compose pull
           docker-compose up -d --build
