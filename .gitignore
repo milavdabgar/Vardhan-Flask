@@ -22,39 +22,26 @@ wheels/
 
 # Virtual Environment
 venv/
-env/
 ENV/
-21f1005510-mad1/
+env/
 
-# Flask
-.webassets-cache
-
-# VS Code
-.vscode/
-*.code-workspace
-
-# PyCharm
+# IDE
 .idea/
-
-# Environment variables
-.env
-.env.*
-
-# Database
-*.sqlite
-*.sqlite3
-*.db
-
-# Logs
-*.log
-logs/
-
-# System Files
-.DS_Store
-Thumbs.db
-
-# Other
-*.bak
+.vscode/
 *.swp
 *.swo
-*~
+
+# Flask
+instance/
+.webassets-cache
+*.db
+
+# Docker
+.docker/
+
+# Project specific
+21F1005510 BDM Proposal.md
+AMC Report Card Vardhan.jpeg
+*.log
+.env
+.env.*
