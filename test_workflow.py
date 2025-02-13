@@ -1,13 +1,45 @@
+import os
+import tempfile
 from app import create_app, db
 from app.models import User, ServiceRequest, RequestFeedback, TechnicianAssignment
 from datetime import datetime, timedelta
+from werkzeug.security import generate_password_hash
 
 def test_workflow():
-    app = create_app()
+    # Create a temporary database file
+    db_fd, db_path = tempfile.mkstemp()
+    
+    # Configure the application to use the temporary database
+    app = create_app({
+        'TESTING': True,
+        'SQLALCHEMY_DATABASE_URI': f'sqlite:///{db_path}',
+        'WTF_CSRF_ENABLED': False
+    })
+
     with app.app_context():
-        # 1. Create a service request as college admin
-        college_admin = User.query.filter_by(email='college1@example.com').first()
+        # Initialize database
+        db.create_all()
+
+        # Create test users
+        college_admin = User(
+            email='college1@example.com',
+            password_hash=generate_password_hash('password123'),
+            role='COLLEGE_ADMIN',
+            institution='Engineering College'
+        )
         
+        technician = User(
+            email='jrtech1@example.com',
+            password_hash=generate_password_hash('password123'),
+            role='JUNIOR_TECHNICIAN',
+            institution='Engineering College'
+        )
+
+        db.session.add(college_admin)
+        db.session.add(technician)
+        db.session.commit()
+
+        # Create a service request
         service_request = ServiceRequest(
             title="Test Computer Not Working",
             description="Computer in Lab 101 is not turning on",
@@ -20,6 +52,20 @@ def test_workflow():
             ticket_number='SR-TEST001'
         )
         
+        db.session.add(service_request)
+        db.session.commit()
+
+        # Create technician assignment
+        assignment = TechnicianAssignment(
+            college=college_admin.institution,
+            is_senior=False
+        )
+        db.session.add(assignment)
+        db.session.commit()
+        assignment = TechnicianAssignment.query.first()
+        assignment.technician_id = technician.id
+        db.session.commit()
+
         # Auto-assign to Jr. Technician
         jr_tech = User.query.join(TechnicianAssignment).filter(
             TechnicianAssignment.college == college_admin.institution,
@@ -30,7 +76,6 @@ def test_workflow():
             service_request.assigned_to = jr_tech.id
             print(f"\n1. Service Request created and assigned to {jr_tech.full_name}")
         
-        db.session.add(service_request)
         db.session.commit()
         
         # 2. Jr. Technician schedules a visit
@@ -117,6 +162,10 @@ def test_workflow():
         print(f"Final Resolution: {service_request.resolution_notes}")
         print(f"Feedback Rating: {feedback.rating} stars")
         print(f"Feedback Comments: {feedback.comments}")
+
+    # Clean up
+    os.close(db_fd)
+    os.unlink(db_path)
 
 if __name__ == "__main__":
     test_workflow()
