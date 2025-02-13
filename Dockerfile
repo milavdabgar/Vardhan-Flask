@@ -4,6 +4,7 @@ FROM python:3.12-slim
 RUN apt-get update && apt-get install -y \
     gcc \
     sqlite3 \
+    dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -18,8 +19,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application
 COPY . .
 
-# Make the entrypoint script executable
-RUN chmod +x docker-entrypoint.sh
+# Fix line endings and make the entrypoint script executable
+RUN dos2unix docker-entrypoint.sh && chmod +x docker-entrypoint.sh
 
 # Create instance directory and set permissions
 RUN mkdir -p instance && chmod 777 instance
