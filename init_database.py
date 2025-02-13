@@ -20,13 +20,15 @@ def init_database():
         if admin is None:
             admin = User(
                 email='admin@vardhaninsys.com',
-                password_hash=generate_password_hash('admin123'),
                 role='admin',
                 full_name='System Administrator',
                 contact_number='1234567890',
-                is_active=True
+                is_active=True,
+                created_at=datetime.utcnow()
             )
+            admin.set_password('admin123')
             db.session.add(admin)
+            db.session.commit()
             print('System admin created successfully!')
 
         # Create colleges and their admins
