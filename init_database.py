@@ -44,15 +44,16 @@ def init_database():
             if admin is None:
                 admin = User(
                     email=f"college{i}@example.com",
-                    password_hash=generate_password_hash("password123"),
                     role="college_admin",
                     full_name=f"{college} Admin",
                     contact_number=f"123456789{i}",
                     institution=college,
-                    is_active=True
+                    is_active=True,
+                    created_at=datetime.utcnow()
                 )
-                college_admins.append(admin)
+                admin.set_password("password123")
                 db.session.add(admin)
+                college_admins.append(admin)
                 print(f'College admin for {college} created successfully!')
 
         # Create junior technicians
