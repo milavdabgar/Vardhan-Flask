@@ -2,11 +2,16 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, develop ]
     tags:
       - 'v*'
   pull_request:
-    branches: [ master ]
+    branches: [ master, develop ]
+
+# Ensure we don't have multiple workflows running for the same PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:

@@ -1,0 +1,17 @@
+# These owners will be the default owners for everything in
+# the repo. They will be requested for review when someone 
+# opens a pull request.
+*       @milavdabgar
+
+# App core functionality
+/app/models.py @milavdabgar
+/app/routes.py @milavdabgar
+
+# Database migrations
+/migrations/ @milavdabgar
+
+# CI/CD and deployment
+/.github/workflows/ @milavdabgar
+/docker-compose.yml @milavdabgar
+/Dockerfile @milavdabgar
+/deploy.sh @milavdabgar
