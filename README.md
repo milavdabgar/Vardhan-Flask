@@ -66,7 +66,25 @@ The application is automatically deployed to https://vardhan.planetmilav.com whe
 1. Clone the repository
 2. Install dependencies: `pip install -r requirements.txt`
 3. Run tests: `pytest`
-4. Start development server: `flask run`
+4. Start development server:
+   ```bash
+   # Option 1: Using Python directly
+   python wsgi.py
+
+   # Option 2: Using Docker
+   docker-compose up
+   ```
+
+### Flask Shell
+For database operations and testing, use Flask shell:
+```bash
+flask shell
+```
+Available objects in shell context:
+- `db`: Database instance
+- `User`: User model
+- `ServiceRequest`: Service Request model
+- `TicketUpdate`: Ticket Update model
 
 ## Security
 - All dependencies are regularly scanned for vulnerabilities
