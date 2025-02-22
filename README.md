@@ -1,6 +1,6 @@
 # Vardhan Flask Application
 
-A Flask-based web application for managing AMC contracts and equipment across multiple colleges.
+Flask-based web application for managing AMC contracts and equipment across multiple colleges.
 
 ## Version
 Current Version: 1.0.0
