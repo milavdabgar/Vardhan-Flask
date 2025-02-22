@@ -95,7 +95,7 @@ jobs:
     - name: Add host key
       run: |
         mkdir -p ~/.ssh
-        ssh-keyscan planetmilav.com >> ~/.ssh/known_hosts
+        ssh-keyscan gppalanpur.in >> ~/.ssh/known_hosts
 
     - name: Deploy to server
       env:
@@ -107,10 +107,10 @@ jobs:
         chmod +x deploy.sh
         
         # Copy deploy script to server
-        scp deploy.sh $SSH_USER@planetmilav.com:$DEPLOY_PATH/deploy.sh
+        scp deploy.sh $SSH_USER@gppalanpur.in:$DEPLOY_PATH/deploy.sh
         
         # Run deploy script with image tag
-        ssh $SSH_USER@planetmilav.com "cd $DEPLOY_PATH && IMAGE_TAG=$IMAGE_TAG chmod +x deploy.sh && ./deploy.sh"
+        ssh $SSH_USER@gppalanpur.in "cd $DEPLOY_PATH && IMAGE_TAG=$IMAGE_TAG chmod +x deploy.sh && ./deploy.sh"
 
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/v')
